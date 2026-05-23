@@ -1,0 +1,6 @@
+services:
+  web:
+    image: ghcr.io/ch6vip/tailg-ble-web:latest
+    restart: unless-stopped
+    ports:
+      - "8080:80"
