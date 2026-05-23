@@ -18,7 +18,12 @@ async function proxyFetch(url: string, method: string, headers: Record<string, s
     body: JSON.stringify({ url, method, headers: { ...BASE_HEADERS, ...headers }, body }),
   })
   if (!resp.ok) throw new Error(`Proxy error: ${resp.status}`)
-  return resp.json()
+  const res: ProxyResponse = await resp.json()
+  const newToken = res.headers['authorization'] || res.headers['Authorization']
+  if (newToken) {
+    localStorage.setItem('cloudToken', newToken)
+  }
+  return res
 }
 
 function isSuccess(data: any): boolean {
