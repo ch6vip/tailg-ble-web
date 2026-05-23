@@ -23,10 +23,9 @@ async function proxyFetch(url: string, method: string, headers: Record<string, s
 
 export async function getSmsCode(phone: string): Promise<void> {
   const res = await proxyFetch(
-    `${API_V1}app/getCode`,
+    `${API_V1}app/getCode?phone=${phone}`,
     'POST',
     {},
-    JSON.stringify({ phone })
   )
   const data = JSON.parse(res.body)
   if (data.code !== '200' && data.code !== 200) {
