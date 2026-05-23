@@ -8,8 +8,6 @@ import type { CarInfo, CloudCmd } from './cloud/types'
 
 const $ = (id: string) => document.getElementById(id)!
 
-const PROXY_BASE = 'https://tailg-proxy.ch6vip.workers.dev'
-
 function initLock() {
   const saved = sessionStorage.getItem('unlocked')
   if (saved === '1') { unlock(); return }
@@ -24,7 +22,7 @@ async function tryUnlock() {
   const pwd = ($('lock-pwd') as HTMLInputElement).value
   if (!pwd) return
   try {
-    const resp = await fetch(`${PROXY_BASE}/auth`, {
+    const resp = await fetch('/auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ password: pwd }),

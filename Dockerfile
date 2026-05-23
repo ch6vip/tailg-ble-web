@@ -5,7 +5,9 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM busybox:1.36
+FROM node:20-alpine
+WORKDIR /app
 COPY --from=build /app/dist /var/www
+COPY server.js .
 EXPOSE 80
-CMD ["busybox", "httpd", "-f", "-p", "80", "-h", "/var/www"]
+CMD ["node", "server.js"]
