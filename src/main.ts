@@ -246,7 +246,7 @@ function init() {
       cloudToken = await login(phone, sms)
       log('登录成功')
       $('cloud-state').textContent = '已登录'
-      $('cloud-state').style.color = '#00ff88'
+      $('cloud-dot').classList.add('online')
       $('btn-cloud-login').style.display = 'none'
       $('btn-cloud-logout').style.display = ''
       cloudMode = true
@@ -261,12 +261,33 @@ function init() {
     selectedImei = ''
     cloudMode = false
     $('cloud-state').textContent = '未登录'
-    $('cloud-state').style.color = '#888'
+    $('cloud-dot').classList.remove('online')
     $('btn-cloud-login').style.display = ''
     $('btn-cloud-logout').style.display = 'none'
     $('car-list').innerHTML = ''
     updateState()
     log('已退出云端登录')
+  })
+
+  // --- Tabs ---
+  const tabs = { cloud: $('tab-cloud'), ble: $('tab-ble') }
+  const panels = { cloud: $('panel-cloud'), ble: $('panel-ble') }
+  function switchTab(t: 'cloud' | 'ble') {
+    Object.entries(tabs).forEach(([k, el]) => el.classList.toggle('active', k === t))
+    Object.entries(panels).forEach(([k, el]) => (el as HTMLElement).classList.toggle('active', k === t))
+    if (t === 'ble') cloudMode = false
+    else cloudMode = !!selectedImei
+    updateState()
+  }
+  tabs.cloud.addEventListener('click', () => switchTab('cloud'))
+  tabs.ble.addEventListener('click', () => switchTab('ble'))
+
+  // --- Advanced panel ---
+  $('advanced-toggle').addEventListener('click', () => {
+    const panel = $('advanced-panel')
+    const isHidden = panel.style.display === 'none' || !panel.style.display
+    panel.style.display = isHidden ? 'block' : 'none'
+    $('advanced-toggle').innerHTML = isHidden ? '&#x25B2; 高级' : '&#x25BC; 高级'
   })
 
   updateState()

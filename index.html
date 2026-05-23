@@ -3,153 +3,216 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>台铃 BLE 控车</title>
+  <title>台铃智控</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #1a1a2e; color: #eee; padding: 20px; max-width: 600px; margin: 0 auto; }
-    h1 { text-align: center; margin-bottom: 20px; font-size: 1.4em; color: #00d4ff; }
-    .section { background: #16213e; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
-    .section h2 { font-size: 0.9em; color: #888; margin-bottom: 10px; text-transform: uppercase; letter-spacing: 1px; }
-    .row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-    .row label { min-width: 60px; font-size: 0.85em; color: #aaa; }
-    .row span { font-weight: bold; }
-    select { background: #0f3460; color: #eee; border: 1px solid #333; border-radius: 6px; padding: 6px 10px; font-size: 0.9em; }
-    button { background: #0f3460; color: #00d4ff; border: 1px solid #00d4ff33; border-radius: 8px; padding: 10px 16px; font-size: 0.9em; cursor: pointer; transition: all 0.2s; }
-    button:hover:not(:disabled) { background: #00d4ff22; }
-    button:disabled { opacity: 0.3; cursor: not-allowed; }
-    .btn-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
-    .cmd-btn { padding: 14px 8px; font-size: 0.95em; }
-    .cmd-btn[data-cmd="02"], .cmd-btn[data-cmd="06"] { border-color: #00ff8855; color: #00ff88; }
-    .cmd-btn[data-cmd="01"], .cmd-btn[data-cmd="07"] { border-color: #ff444455; color: #ff4444; }
-    .cmd-btn[data-cmd="08"] { border-color: #ffaa0055; color: #ffaa00; }
-    textarea { width: 100%; height: 150px; background: #0a0a1a; color: #0f0; border: 1px solid #333; border-radius: 8px; padding: 10px; font-family: 'Consolas', monospace; font-size: 0.75em; resize: vertical; }
-    .state-disconnected { color: #ff4444; }
-    .state-connecting { color: #ffaa00; }
-    .state-connected { color: #00d4ff; }
-    .state-authenticated { color: #00ff88; }
-    .conn-btns { display: flex; gap: 8px; }
-    .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-    .status-item { background: #0f3460; border-radius: 8px; padding: 10px; text-align: center; }
-    .status-item .val { font-size: 1.2em; font-weight: bold; margin-top: 4px; }
-    .car-item { background: #0f3460; border: 1px solid #333; border-radius: 8px; padding: 10px 12px; margin-top: 8px; cursor: pointer; transition: all 0.2s; }
-    .car-item:hover { border-color: #00d4ff55; }
-    .car-item.selected { border-color: #00d4ff; background: #00d4ff11; }
-    .car-item .car-name { font-weight: bold; }
-    .car-item .car-info { font-size: 0.8em; color: #888; margin-top: 4px; }
-    input::placeholder { color: #666; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #0d1117; color: #e6edf3; min-height: 100vh; }
+    .app { max-width: 480px; margin: 0 auto; padding: 16px; }
+
+    .header { text-align: center; padding: 20px 0 12px; }
+    .header h1 { font-size: 1.5em; color: #58a6ff; font-weight: 600; }
+
+    .tabs { display: flex; border-bottom: 1px solid #30363d; margin-bottom: 16px; }
+    .tab { flex: 1; padding: 12px 0; text-align: center; font-size: 0.9em; color: #8b949e; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.2s; }
+    .tab.active { color: #58a6ff; border-bottom-color: #58a6ff; }
+    .tab:hover:not(.active) { color: #c9d1d9; }
+
+    .panel { display: none; }
+    .panel.active { display: block; }
+
+    .card { background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
+
+    .form-row { display: flex; gap: 8px; margin-bottom: 10px; }
+    .form-input { flex: 1; background: #0d1117; color: #e6edf3; border: 1px solid #30363d; border-radius: 8px; padding: 10px 12px; font-size: 0.9em; outline: none; transition: border-color 0.2s; }
+    .form-input:focus { border-color: #58a6ff; }
+    .form-input::placeholder { color: #484f58; }
+
+    .btn { background: #21262d; color: #c9d1d9; border: 1px solid #30363d; border-radius: 8px; padding: 10px 16px; font-size: 0.85em; cursor: pointer; transition: all 0.2s; white-space: nowrap; }
+    .btn:hover:not(:disabled) { background: #30363d; border-color: #58a6ff; color: #58a6ff; }
+    .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .btn-primary { background: #1f6feb; color: #fff; border-color: #1f6feb; }
+    .btn-primary:hover:not(:disabled) { background: #388bfd; border-color: #388bfd; color: #fff; }
+
+    .cloud-status { display: flex; align-items: center; gap: 8px; font-size: 0.85em; color: #8b949e; }
+    .cloud-status .dot { width: 8px; height: 8px; border-radius: 50%; background: #484f58; }
+    .cloud-status .dot.online { background: #3fb950; }
+
+    .car-item { background: #0d1117; border: 1px solid #30363d; border-radius: 8px; padding: 12px; margin-top: 8px; cursor: pointer; transition: all 0.2s; }
+    .car-item:hover { border-color: #58a6ff44; }
+    .car-item.selected { border-color: #58a6ff; background: #58a6ff0a; }
+    .car-item .car-name { font-weight: 600; font-size: 0.9em; }
+    .car-item .car-info { font-size: 0.75em; color: #8b949e; margin-top: 4px; }
+
+    .ble-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
+    .ble-row label { min-width: 50px; font-size: 0.8em; color: #8b949e; }
+    .ble-row span { font-size: 0.9em; font-weight: 500; }
+    .ble-btns { display: flex; gap: 8px; flex-wrap: wrap; }
+
+    .status-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+    .status-cell { background: linear-gradient(135deg, #161b22, #1c2128); border: 1px solid #30363d; border-radius: 10px; padding: 14px 8px; text-align: center; }
+    .status-cell .val { font-size: 1.6em; font-weight: 700; color: #e6edf3; }
+    .status-cell .label { font-size: 0.7em; color: #8b949e; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+    .status-wide { background: linear-gradient(135deg, #161b22, #1c2128); border: 1px solid #30363d; border-radius: 10px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; }
+    .status-wide .label { font-size: 0.8em; color: #8b949e; }
+    .status-wide .val { font-size: 1em; font-weight: 600; }
+
+    .ctrl-grid { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+    .ctrl-btn { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; background: #161b22; border: 1px solid #30363d; border-radius: 12px; padding: 16px 8px; cursor: pointer; transition: all 0.2s; }
+    .ctrl-btn:hover:not(:disabled) { transform: translateY(-1px); }
+    .ctrl-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+    .ctrl-btn .icon { font-size: 1.4em; }
+    .ctrl-btn .text { font-size: 0.75em; color: #8b949e; }
+    .ctrl-btn.green { border-color: #3fb95033; }
+    .ctrl-btn.green .icon { color: #3fb950; }
+    .ctrl-btn.green:hover:not(:disabled) { background: #3fb95011; border-color: #3fb950; }
+    .ctrl-btn.red { border-color: #f8514933; }
+    .ctrl-btn.red .icon { color: #f85149; }
+    .ctrl-btn.red:hover:not(:disabled) { background: #f8514911; border-color: #f85149; }
+    .ctrl-btn.yellow { border-color: #d2992233; }
+    .ctrl-btn.yellow .icon { color: #d29922; }
+    .ctrl-btn.yellow:hover:not(:disabled) { background: #d2992211; border-color: #d29922; }
+    .ctrl-btn.blue { border-color: #58a6ff33; }
+    .ctrl-btn.blue .icon { color: #58a6ff; }
+    .ctrl-btn.blue:hover:not(:disabled) { background: #58a6ff11; border-color: #58a6ff; }
+
+    .advanced-toggle { width: 100%; background: none; border: none; color: #8b949e; padding: 12px; font-size: 0.8em; cursor: pointer; text-align: center; }
+    .advanced-toggle:hover { color: #c9d1d9; }
+    .advanced-panel { display: none; }
+
+    .raw-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .raw-select { background: #0d1117; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 8px; font-size: 0.8em; }
+    .raw-input { flex: 1; background: #0d1117; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 8px; font-family: 'Consolas', monospace; font-size: 0.8em; }
+    .raw-input::placeholder { color: #484f58; }
+
+    textarea#log { width: 100%; height: 120px; background: #010409; color: #3fb950; border: 1px solid #30363d; border-radius: 8px; padding: 10px; font-family: 'Consolas', monospace; font-size: 0.7em; resize: vertical; margin-top: 8px; }
+
+    .log-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+    .log-header span { font-size: 0.8em; color: #8b949e; }
+    .log-btns { display: flex; gap: 6px; }
+    .log-btns .btn { padding: 4px 10px; font-size: 0.75em; }
+
+    .state-disconnected { color: #f85149; }
+    .state-connecting { color: #d29922; }
+    .state-connected { color: #58a6ff; }
+    .state-authenticated { color: #3fb950; }
+
+    select#model-select { background: #0d1117; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 6px 10px; font-size: 0.85em; }
   </style>
 </head>
 <body>
-  <h1>台铃智控</h1>
+  <div class="app">
+    <div class="header"><h1>台铃智控</h1></div>
 
-  <div class="section">
-    <h2>云端控车</h2>
-    <div class="row">
-      <input id="phone-input" type="tel" placeholder="手机号" style="flex:1;background:#0f3460;color:#eee;border:1px solid #333;border-radius:6px;padding:8px 10px;font-size:0.9em" />
-      <button id="btn-get-code">验证码</button>
+    <div class="tabs">
+      <div class="tab active" id="tab-cloud">云端控车</div>
+      <div class="tab" id="tab-ble">蓝牙直连</div>
     </div>
-    <div class="row">
-      <input id="sms-input" type="text" placeholder="验证码" style="flex:1;background:#0f3460;color:#eee;border:1px solid #333;border-radius:6px;padding:8px 10px;font-size:0.9em" />
-      <button id="btn-cloud-login">登录</button>
-      <button id="btn-cloud-logout" style="display:none">退出</button>
-    </div>
-    <div class="row">
-      <label>状态</label>
-      <span id="cloud-state" style="color:#888">未登录</span>
-    </div>
-    <div id="car-list"></div>
-  </div>
 
-  <div class="section">
-    <h2>蓝牙直连</h2>
-    <div class="row">
-      <label>型号</label>
-      <select id="model-select">
-        <option value="KKS">KKS (默认)</option>
-        <option value="BB">BB (保镖)</option>
-        <option value="AX">AX (安芯)</option>
-        <option value="JD">JD (极大)</option>
-        <option value="HJ">HJ (宏基)</option>
-        <option value="JW">JW/C39</option>
-        <option value="XL">XL (西联)</option>
-        <option value="YY">YY (亿源)</option>
-      </select>
-    </div>
-    <div class="row">
-      <label>状态</label>
-      <span id="conn-state" class="state-disconnected">未连接</span>
-    </div>
-    <div class="row">
-      <label>设备</label>
-      <span id="device-name">-</span>
-    </div>
-    <div class="row">
-      <label>Token</label>
-      <span id="token-val" style="font-family:monospace">-</span>
-    </div>
-    <div class="conn-btns">
-      <button id="btn-scan">扫描连接</button>
-      <button id="btn-scan-all">扫描全部</button>
-      <button id="btn-diagnose">诊断</button>
-      <button id="btn-disconnect">断开</button>
-    </div>
-  </div>
-
-  <div class="section">
-    <h2>车辆状态</h2>
-    <div class="status-grid">
-      <div class="status-item"><div class="label">电压</div><div class="val" id="voltage-val">-</div></div>
-      <div class="status-item"><div class="label">防盗</div><div class="val" id="lock-state">-</div></div>
-      <div class="status-item"><div class="label">电源</div><div class="val" id="power-state">-</div></div>
-      <div class="status-item"><div class="label">电量</div><div class="val" id="battery-val">-</div></div>
-    </div>
-  </div>
-
-  <div class="section">
-    <h2>控制</h2>
-    <div class="btn-row">
-      <button class="cmd-btn" data-cmd="01" disabled>设防</button>
-      <button class="cmd-btn" data-cmd="02" disabled>解防</button>
-      <button class="cmd-btn" data-cmd="08" disabled>寻车</button>
-    </div>
-    <div class="btn-row" style="margin-top:8px">
-      <button class="cmd-btn" data-cmd="06" disabled>上电</button>
-      <button class="cmd-btn" data-cmd="07" disabled>断电</button>
-      <button class="cmd-btn" data-cmd="05" disabled>开坐垫</button>
-    </div>
-    <div class="btn-row" style="margin-top:8px">
-      <button class="cmd-btn" data-cmd="0D" disabled>读状态</button>
-      <button class="cmd-btn" data-cmd="0E" disabled>读防盗</button>
-      <button disabled style="visibility:hidden"></button>
-    </div>
-  </div>
-
-  <div class="section">
-    <h2>原始发送</h2>
-    <div class="row">
-      <select id="char-select" style="width:80px">
-        <option value="fe02">fe02</option>
-        <option value="fcc1">fcc1</option>
-      </select>
-      <input id="hex-input" type="text" placeholder="Hex 数据 (如 A700000A1001...)" style="flex:1;background:#0f3460;color:#eee;border:1px solid #333;border-radius:6px;padding:6px 10px;font-family:monospace;font-size:0.85em" />
-      <button id="btn-send-raw">发送</button>
-    </div>
-    <div class="row" style="margin-top:8px">
-      <button id="btn-qgj-login" style="font-size:0.85em">QGJ 登录 (默认密码)</button>
-    </div>
-  </div>
-
-  <div class="section">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <h2 style="margin:0">日志</h2>
-      <div style="display:flex;gap:6px">
-        <button id="btn-copy-log" style="padding:4px 10px;font-size:0.8em">复制</button>
-        <button id="btn-clear-log" style="padding:4px 10px;font-size:0.8em">清空</button>
+    <div class="panel active" id="panel-cloud">
+      <div class="card">
+        <div class="form-row">
+          <input id="phone-input" class="form-input" type="tel" placeholder="手机号" />
+          <button id="btn-get-code" class="btn">验证码</button>
+        </div>
+        <div class="form-row">
+          <input id="sms-input" class="form-input" type="text" placeholder="验证码" />
+          <button id="btn-cloud-login" class="btn btn-primary">登录</button>
+          <button id="btn-cloud-logout" class="btn" style="display:none">退出</button>
+        </div>
+        <div class="cloud-status">
+          <div class="dot" id="cloud-dot"></div>
+          <span id="cloud-state">未登录</span>
+        </div>
+        <div id="car-list"></div>
       </div>
     </div>
-    <textarea id="log" readonly></textarea>
-  </div>
 
+    <div class="panel" id="panel-ble">
+      <div class="card">
+        <div class="ble-row">
+          <label>型号</label>
+          <select id="model-select">
+            <option value="KKS">KKS (默认)</option>
+            <option value="BB">BB (保镖)</option>
+            <option value="AX">AX (安芯)</option>
+            <option value="JD">JD (极大)</option>
+            <option value="HJ">HJ (宏基)</option>
+            <option value="JW">JW/C39</option>
+            <option value="XL">XL (西联)</option>
+            <option value="YY">YY (亿源)</option>
+          </select>
+        </div>
+        <div class="ble-row">
+          <label>状态</label>
+          <span id="conn-state" class="state-disconnected">未连接</span>
+        </div>
+        <div class="ble-row">
+          <label>设备</label>
+          <span id="device-name">-</span>
+        </div>
+        <div class="ble-row">
+          <label>Token</label>
+          <span id="token-val" style="font-family:monospace;font-size:0.8em">-</span>
+        </div>
+        <div class="ble-btns">
+          <button id="btn-scan" class="btn btn-primary">扫描连接</button>
+          <button id="btn-scan-all" class="btn">扫描全部</button>
+          <button id="btn-diagnose" class="btn">诊断</button>
+          <button id="btn-disconnect" class="btn">断开</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="status-grid">
+        <div class="status-cell"><div class="val" id="battery-val">-</div><div class="label">电量</div></div>
+        <div class="status-cell"><div class="val" id="voltage-val">-</div><div class="label">电压</div></div>
+        <div class="status-cell"><div class="val" id="lock-state">-</div><div class="label">防盗</div></div>
+      </div>
+      <div class="status-wide">
+        <div class="label">电源状态</div>
+        <div class="val" id="power-state">-</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="ctrl-grid">
+        <button class="ctrl-btn green cmd-btn" data-cmd="02" disabled><span class="icon">&#xe801;</span><span class="text">解防</span></button>
+        <button class="ctrl-btn green cmd-btn" data-cmd="06" disabled><span class="icon">&#x26A1;</span><span class="text">上电</span></button>
+        <button class="ctrl-btn yellow cmd-btn" data-cmd="08" disabled><span class="icon">&#x1F514;</span><span class="text">寻车</span></button>
+        <button class="ctrl-btn red cmd-btn" data-cmd="01" disabled><span class="icon">&#x1F512;</span><span class="text">设防</span></button>
+        <button class="ctrl-btn red cmd-btn" data-cmd="07" disabled><span class="icon">&#x23FB;</span><span class="text">断电</span></button>
+        <button class="ctrl-btn blue cmd-btn" data-cmd="05" disabled><span class="icon">&#x1F4BA;</span><span class="text">坐垫</span></button>
+      </div>
+    </div>
+
+    <button class="advanced-toggle" id="advanced-toggle">&#x25BC; 高级</button>
+    <div class="advanced-panel" id="advanced-panel">
+      <div class="card">
+        <div class="raw-row">
+          <select id="char-select" class="raw-select">
+            <option value="fe02">fe02</option>
+            <option value="fcc1">fcc1</option>
+          </select>
+          <input id="hex-input" class="raw-input" type="text" placeholder="Hex (如 A700000A1001...)" />
+          <button id="btn-send-raw" class="btn">发送</button>
+        </div>
+        <div class="raw-row">
+          <button id="btn-qgj-login" class="btn" style="font-size:0.8em">QGJ 登录</button>
+          <button class="btn cmd-btn" data-cmd="0D" disabled style="font-size:0.8em">读状态</button>
+          <button class="btn cmd-btn" data-cmd="0E" disabled style="font-size:0.8em">读防盗</button>
+        </div>
+        <div class="log-header">
+          <span>日志</span>
+          <div class="log-btns">
+            <button id="btn-copy-log" class="btn">复制</button>
+            <button id="btn-clear-log" class="btn">清空</button>
+          </div>
+        </div>
+        <textarea id="log" readonly></textarea>
+      </div>
+    </div>
+  </div>
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>
