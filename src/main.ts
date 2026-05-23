@@ -8,23 +8,38 @@ import type { CarInfo, CloudCmd } from './cloud/types'
 
 const $ = (id: string) => document.getElementById(id)!
 
-const APP_PASSWORD = 'tailg2026'
+async function hashPwd(pwd: string): Promise<string> {
+  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pwd))
+  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('')
+}
 
 function initLock() {
   const saved = sessionStorage.getItem('unlocked')
-  if (saved === '1') {
-    unlock()
-    return
+  if (saved === '1') { unlock(); return }
+
+  const hasPassword = !!localStorage.getItem('appPwdHash')
+  if (!hasPassword) {
+    ($('lock-pwd') as HTMLInputElement).placeholder = '设置访问密码'
+    $('lock-btn').textContent = '设置'
   }
+
   $('lock-btn').addEventListener('click', tryUnlock)
   $('lock-pwd').addEventListener('keydown', (e) => {
     if ((e as KeyboardEvent).key === 'Enter') tryUnlock()
   })
 }
 
-function tryUnlock() {
+async function tryUnlock() {
   const pwd = ($('lock-pwd') as HTMLInputElement).value
-  if (pwd === APP_PASSWORD) {
+  if (!pwd) return
+  const hash = await hashPwd(pwd)
+  const stored = localStorage.getItem('appPwdHash')
+
+  if (!stored) {
+    localStorage.setItem('appPwdHash', hash)
+    sessionStorage.setItem('unlocked', '1')
+    unlock()
+  } else if (hash === stored) {
     sessionStorage.setItem('unlocked', '1')
     unlock()
   } else {
