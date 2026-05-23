@@ -244,6 +244,7 @@ function init() {
     try {
       log('正在登录...')
       cloudToken = await login(phone, sms)
+      localStorage.setItem('cloudToken', cloudToken)
       log('登录成功')
       $('cloud-state').textContent = '已登录'
       $('cloud-dot').classList.add('online')
@@ -260,6 +261,7 @@ function init() {
     cloudToken = ''
     selectedImei = ''
     cloudMode = false
+    localStorage.removeItem('cloudToken')
     $('cloud-state').textContent = '未登录'
     $('cloud-dot').classList.remove('online')
     $('btn-cloud-login').style.display = ''
@@ -281,6 +283,18 @@ function init() {
   }
   tabs.cloud.addEventListener('click', () => switchTab('cloud'))
   tabs.ble.addEventListener('click', () => switchTab('ble'))
+
+  // --- 恢复登录状态 ---
+  const savedToken = localStorage.getItem('cloudToken')
+  if (savedToken) {
+    cloudToken = savedToken
+    cloudMode = true
+    $('cloud-state').textContent = '已登录'
+    $('cloud-dot').classList.add('online')
+    $('btn-cloud-login').style.display = 'none'
+    $('btn-cloud-logout').style.display = ''
+    loadCars()
+  }
 
   // --- Advanced panel ---
   $('advanced-toggle').addEventListener('click', () => {
