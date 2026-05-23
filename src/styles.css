@@ -46,6 +46,10 @@ button {
   cursor: pointer;
 }
 
+.is-hidden {
+  display: none !important;
+}
+
 .app {
   width: min(100%, 430px);
   min-height: 100vh;
@@ -707,6 +711,10 @@ select#model-select:focus {
   margin-top: 12px;
 }
 
+.advanced-panel.is-open {
+  display: block;
+}
+
 .debug-drawer .card {
   padding: 16px;
   color: #f9f3e4;
@@ -775,6 +783,7 @@ textarea#log {
   background: rgba(247, 240, 223, 0.94);
   box-shadow: 0 14px 34px rgba(27, 37, 31, 0.16);
   backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
 }
 
 .floating::before {
@@ -886,6 +895,24 @@ textarea#log {
   margin-top: 12px;
   color: #ff8a9b;
   font-size: 0.86rem;
+}
+
+.lock-box .error.is-visible {
+  display: block;
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .floating,
+  .card,
+  .connection-toggle,
+  .cloud-session,
+  .car-item {
+    background-color: rgba(247, 240, 223, 0.98);
+  }
+
+  .debug-drawer .card {
+    background: #111a17;
+  }
 }
 
 @media (max-width: 520px) {

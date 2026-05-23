@@ -6,7 +6,12 @@ import { AES_KEYS, type CommandCode, type ModelType, type ParsedResponse } from 
 import { getSmsCode, login, getCarStatus, sendCommand } from './cloud/api'
 import type { CarInfo, CloudCmd } from './cloud/types'
 
-const $ = (id: string) => document.getElementById(id)!
+function $(id: string): HTMLElement {
+  const el = document.getElementById(id)
+  if (!el) throw new Error(`Missing DOM element #${id}`)
+  return el
+}
+const MAX_LOG_LINES = 400
 
 function initLock() {
   const saved = sessionStorage.getItem('unlocked')
@@ -23,6 +28,7 @@ function registerServiceWorker() {
   if (!window.isSecureContext) return
   navigator.serviceWorker.register('/sw.js').catch(() => {
     // PWA registration is best-effort; vehicle control must not depend on it.
+    console.warn('Service worker registration failed')
   })
 }
 
@@ -40,26 +46,29 @@ async function tryUnlock() {
       sessionStorage.setItem('unlocked', '1')
       unlock()
     } else {
-      $('lock-error').style.display = 'block'
+      $('lock-error').classList.add('is-visible')
     }
   } catch {
-    $('lock-error').style.display = 'block'
+    $('lock-error').classList.add('is-visible')
   }
 }
 
 function unlock() {
-  $('lock-screen').style.display = 'none'
-  document.querySelector('.app')!.removeAttribute('style')
+  $('lock-screen').classList.add('is-hidden')
+  document.querySelector('.app')!.classList.remove('is-hidden')
 }
 
 let conn: TailgBleConnection
 let cloudToken = ''
 let selectedImei = ''
-let cloudMode = true
-let commandBusy = false
-let activeCommandName = ''
-let commandTimeout: number | undefined
-let currentFeedbackState = 'Idle'
+let activeChannel: 'cloud' | 'ble' = 'cloud'
+let controlBusy = false
+let debugBusy = false
+const commandTimeouts: Partial<Record<'debug' | 'control', number>> = {}
+const busyCommands: Partial<Record<'debug' | 'control', string>> = {}
+type FeedbackMark = 'Idle' | 'Ready' | 'Hold' | 'TX' | 'OK' | 'Fail' | 'Timeout'
+let currentFeedbackState: FeedbackMark = 'Idle'
+let supportNotesChecked = false
 
 const CMD_NAMES: Record<string, string> = {
   '01': '设防',
@@ -82,11 +91,14 @@ function getSelectedKey(): string {
 function log(msg: string) {
   const el = $('log') as HTMLTextAreaElement
   const ts = new Date().toLocaleTimeString()
-  el.value += `[${ts}] ${msg}\n`
+  const lines = el.value ? el.value.split('\n').filter(Boolean) : []
+  lines.push(`[${ts}] ${msg}`)
+  if (lines.length > MAX_LOG_LINES) lines.splice(0, lines.length - MAX_LOG_LINES)
+  el.value = `${lines.join('\n')}\n`
   el.scrollTop = el.scrollHeight
 }
 
-function setFeedback(title: string, text: string, mark = 'Live') {
+function setFeedback(title: string, text: string, mark: FeedbackMark = 'Idle') {
   currentFeedbackState = mark
   const box = document.querySelector<HTMLElement>('.feedback')
   const titleEl = document.getElementById('command-feedback-title')
@@ -98,10 +110,14 @@ function setFeedback(title: string, text: string, mark = 'Live') {
   if (markEl) markEl.textContent = mark
 }
 
+function shouldRenderReadyFeedback() {
+  return currentFeedbackState === 'Idle' || currentFeedbackState === 'Ready'
+}
+
 function getControlStatus() {
   const cloudReady = !!cloudToken && !!selectedImei
   const bleReady = conn?.state === 'authenticated'
-  const channel = cloudMode ? 'cloud' : 'ble'
+  const channel = activeChannel
 
   if (cloudReady && bleReady) {
     return {
@@ -161,45 +177,65 @@ function updateCloudSessionView() {
   const loginForm = document.getElementById('cloud-login-form')
   const session = document.getElementById('cloud-session')
   const isLoggedIn = !!cloudToken
-  if (loginForm) loginForm.style.display = isLoggedIn ? 'none' : ''
-  if (session) session.style.display = isLoggedIn ? 'flex' : 'none'
+  loginForm?.classList.toggle('is-hidden', isLoggedIn)
+  session?.classList.toggle('is-hidden', !isLoggedIn)
 }
 
 function updateSupportNotes() {
+  if (supportNotesChecked) return
+  supportNotesChecked = true
   const note = document.getElementById('ble-support-note')
   if (!note) return
   if (!('bluetooth' in navigator)) {
     note.textContent = '当前浏览器不支持 Web Bluetooth，请在安卓 Chrome/Edge 或 HTTPS 环境下使用蓝牙直连。'
-    note.style.display = 'block'
+    note.classList.remove('is-hidden')
     return
   }
   if (!window.isSecureContext) {
     note.textContent = '蓝牙直连需要 HTTPS 或 localhost 环境。'
-    note.style.display = 'block'
+    note.classList.remove('is-hidden')
     return
   }
   note.textContent = ''
-  note.style.display = 'none'
+  note.classList.add('is-hidden')
+}
+
+function getCommandGroup(cmd: string): 'debug' | 'control' {
+  return cmd === '0D' || cmd === '0E' ? 'debug' : 'control'
+}
+
+function isGroupBusy(group: 'debug' | 'control') {
+  return group === 'debug' ? debugBusy : controlBusy
+}
+
+function setGroupBusy(group: 'debug' | 'control', isBusy: boolean) {
+  if (group === 'debug') debugBusy = isBusy
+  else controlBusy = isBusy
+}
+
+function renderBusyClasses() {
+  document.querySelectorAll<HTMLButtonElement>('.cmd-btn').forEach((btn) => {
+    const group = getCommandGroup(btn.dataset.cmd ?? '')
+    btn.classList.toggle('is-busy', !!busyCommands[group] && busyCommands[group] === btn.dataset.cmd)
+  })
 }
 
 function setCommandBusy(isBusy: boolean, name = '') {
-  if (commandTimeout != null) {
-    window.clearTimeout(commandTimeout)
-    commandTimeout = undefined
+  const group = getCommandGroup(name)
+  if (commandTimeouts[group] != null) {
+    window.clearTimeout(commandTimeouts[group])
+    commandTimeouts[group] = undefined
   }
-  commandBusy = isBusy
-  activeCommandName = name
-  document.querySelectorAll<HTMLButtonElement>('.cmd-btn').forEach((btn) => {
-    btn.classList.toggle('is-busy', isBusy && btn.dataset.cmd === name)
-  })
+  setGroupBusy(group, isBusy)
+  busyCommands[group] = isBusy ? name : undefined
+  renderBusyClasses()
   if (isBusy) {
     const label = CMD_NAMES[name] ?? name
-    commandTimeout = window.setTimeout(() => {
-      commandBusy = false
-      activeCommandName = ''
-      document.querySelectorAll<HTMLButtonElement>('.cmd-btn').forEach((btn) => {
-        btn.classList.remove('is-busy')
-      })
+    commandTimeouts[group] = window.setTimeout(() => {
+      commandTimeouts[group] = undefined
+      setGroupBusy(group, false)
+      busyCommands[group] = undefined
+      renderBusyClasses()
       updateState()
       setFeedback(`${label}执行超时`, '未在预期时间内收到回执，按钮已恢复，可检查链路后重试。', 'Timeout')
       log(`${label}执行超时，已恢复控车按钮`)
@@ -240,14 +276,16 @@ function updateState() {
   tokenEl.textContent = conn.token || '-'
 
   const btns = document.querySelectorAll<HTMLButtonElement>('.cmd-btn')
-  const canControl = cloudMode ? !!cloudToken && !!selectedImei : conn.state === 'authenticated'
+  const canControl = activeChannel === 'cloud' ? !!cloudToken && !!selectedImei : conn.state === 'authenticated'
   btns.forEach((btn) => {
-    btn.disabled = !canControl || commandBusy
+    const cmd = btn.dataset.cmd ?? ''
+    const group = getCommandGroup(cmd)
+    btn.disabled = !canControl || isGroupBusy(group)
   })
-  if (!canControl) {
+  if (!canControl && shouldRenderReadyFeedback()) {
     setFeedback('等待控车指令', '连接车辆或登录云端后即可使用常用控车。', 'Idle')
-  } else if (!commandBusy) {
-    setFeedback('控车已就绪', cloudMode ? '当前指令将通过云端发送。' : '当前指令将通过蓝牙直连发送。', 'Ready')
+  } else if (!controlBusy && !debugBusy && shouldRenderReadyFeedback()) {
+    setFeedback('控车已就绪', activeChannel === 'cloud' ? '当前指令将通过云端发送。' : '当前指令将通过蓝牙直连发送。', 'Ready')
   }
   syncSummary()
   updateControlStatus()
@@ -269,7 +307,7 @@ function handleResponse(resp: ParsedResponse) {
   if (resp.type === 'command') {
     const name = CMD_NAMES[resp.commandType ?? ''] ?? resp.commandType
     log(`  → ${name}: ${resp.success ? '成功' : '失败/超时'}`)
-    setCommandBusy(false)
+    setCommandBusy(false, resp.commandType ?? '')
     setFeedback(
       resp.success ? `${name}执行成功` : `${name}执行失败`,
       resp.success ? '车辆已返回成功回执。' : '未收到成功回执，可检查链路后重试。',
@@ -287,9 +325,9 @@ async function sendCmd(cmd: CommandCode) {
   try {
     await conn.write(data)
   } catch (e: any) {
-    setCommandBusy(false)
+    setCommandBusy(false, cmd)
     setFeedback('蓝牙指令发送失败', e.message, 'Fail')
-    throw e
+    log(`蓝牙指令发送失败: ${e.message}`)
   }
 }
 
@@ -308,32 +346,57 @@ async function sendCloudCmd(cmd: CommandCode) {
     setFeedback('云端指令发送中', `正在发送${name}，等待台铃云端响应。`, 'TX')
     const msg = await sendCommand(cloudToken, selectedImei, cloudCmd)
     log(`← 云端响应: ${msg}`)
-    setCommandBusy(false)
+    setCommandBusy(false, cmd)
     setFeedback('云端指令已返回', msg, 'OK')
   } catch (e: any) {
     log(`云端指令失败: ${e.message}`)
-    setCommandBusy(false)
+    setCommandBusy(false, cmd)
     setFeedback('云端指令失败', e.message, 'Fail')
   }
+}
+
+function clearCloudSession(reason?: string) {
+  cloudToken = ''
+  selectedImei = ''
+  localStorage.removeItem('cloudToken')
+  fetch('/api/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token: '' }),
+  }).catch(() => {})
+  $('car-list').innerHTML = ''
+  if (reason) {
+    log(reason)
+    setFeedback('云端登录已失效', '请重新获取验证码并登录。', 'Fail')
+  }
+  updateState()
 }
 
 function armDangerousCommand(btn: HTMLButtonElement, cmd: CommandCode, run: () => Promise<void>) {
   let timer: number | undefined
   let armed = false
+  let pointerId: number | undefined
   const originalText = btn.querySelector('.text')?.textContent ?? ''
 
   const reset = () => {
     if (timer != null) window.clearTimeout(timer)
     timer = undefined
     armed = false
+    if (pointerId != null && btn.hasPointerCapture?.(pointerId)) {
+      btn.releasePointerCapture(pointerId)
+    }
+    pointerId = undefined
     btn.classList.remove('is-holding')
     const text = btn.querySelector('.text')
     if (text) text.textContent = originalText
     if (currentFeedbackState === 'Hold') updateState()
   }
 
-  const start = () => {
-    if (btn.disabled || commandBusy) return
+  const start = (event: PointerEvent) => {
+    if (btn.disabled || controlBusy) return
+    event.preventDefault()
+    pointerId = event.pointerId
+    btn.setPointerCapture?.(event.pointerId)
     armed = true
     btn.classList.add('is-holding')
     const text = btn.querySelector('.text')
@@ -350,6 +413,9 @@ function armDangerousCommand(btn: HTMLButtonElement, cmd: CommandCode, run: () =
   btn.addEventListener('pointerup', reset)
   btn.addEventListener('pointerleave', reset)
   btn.addEventListener('pointercancel', reset)
+  btn.addEventListener('lostpointercapture', reset)
+  btn.addEventListener('contextmenu', (event) => event.preventDefault())
+  window.addEventListener('blur', reset)
 }
 
 async function loadCars() {
@@ -361,9 +427,18 @@ async function loadCars() {
     if (cars.length === 1) selectCar(cars[0])
   } catch (e: any) {
     log(`获取车辆失败: ${e.message}`)
+    if (cloudToken && /token|登录|认证|授权|401|403|过期|失效/i.test(e.message)) {
+      clearCloudSession('云端 token 已失效，已清理登录状态')
+    }
   } finally {
     updateState()
   }
+}
+
+function buildCarInfoText(car: CarInfo): string {
+  const defence = car.defenceStatus === '1' ? '已设防' : '已解防'
+  const acc = car.acc === '1' ? '已上电' : '已断电'
+  return `IMEI: ${car.imei} | ${defence} | ${acc} | 电量: ${car.electricQuantity || '-'}%`
 }
 
 function renderCarList(cars: CarInfo[]) {
@@ -379,8 +454,14 @@ function renderCarList(cars: CarInfo[]) {
   for (const car of cars) {
     const div = document.createElement('div')
     div.className = 'car-item'
-    div.innerHTML = `<div class="car-name">${car.carName || car.btname || car.imei}</div>
-      <div class="car-info">IMEI: ${car.imei} | ${car.defenceStatus === '1' ? '已设防' : '已解防'} | ${car.acc === '1' ? '已上电' : '已断电'} | 电量: ${car.electricQuantity || '-'}%</div>`
+    div.dataset.imei = car.imei
+    const name = document.createElement('div')
+    name.className = 'car-name'
+    name.textContent = car.carName || car.btname || car.imei
+    const info = document.createElement('div')
+    info.className = 'car-info'
+    info.textContent = buildCarInfoText(car)
+    div.append(name, info)
     div.addEventListener('click', () => selectCar(car))
     container.appendChild(div)
   }
@@ -393,7 +474,7 @@ function selectCar(car: CarInfo) {
   document.querySelectorAll('.car-item').forEach(el => el.classList.remove('selected'))
   const items = document.querySelectorAll('.car-item')
   items.forEach(el => {
-    if (el.querySelector('.car-info')?.textContent?.includes(car.imei)) el.classList.add('selected')
+    if ((el as HTMLElement).dataset.imei === car.imei) el.classList.add('selected')
   })
   $('lock-state').textContent = car.defenceStatus === '1' ? '已设防' : '已解防'
   $('power-state').textContent = car.acc === '1' ? '已上电' : '已断电'
@@ -455,13 +536,19 @@ function init() {
 
   document.querySelectorAll<HTMLButtonElement>('.cmd-btn').forEach((btn) => {
     const run = async () => {
-      const cmd = btn.dataset.cmd as CommandCode
-      if (!cmd) return
-      if (commandBusy) return
-      if (cloudMode && selectedImei) {
-        await sendCloudCmd(cmd)
-      } else {
-        await sendCmd(cmd)
+      try {
+        const cmd = btn.dataset.cmd as CommandCode
+        if (!cmd) return
+        if (isGroupBusy(getCommandGroup(cmd))) return
+        if (activeChannel === 'cloud' && selectedImei) {
+          await sendCloudCmd(cmd)
+        } else {
+          await sendCmd(cmd)
+        }
+      } catch (e: any) {
+        setCommandBusy(false, btn.dataset.cmd ?? '')
+        log(`指令执行异常: ${e.message}`)
+        setFeedback('指令执行异常', e.message || '请检查连接后重试。', 'Fail')
       }
     }
     const cmd = btn.dataset.cmd as CommandCode
@@ -533,7 +620,7 @@ function init() {
         body: JSON.stringify({ token: cloudToken }),
       }).catch(() => {})
       log('登录成功')
-      cloudMode = true
+      activeChannel = 'cloud'
       await loadCars()
     } catch (e: any) {
       log(`登录失败: ${e.message}`)
@@ -541,17 +628,7 @@ function init() {
   })
 
   $('btn-cloud-logout').addEventListener('click', () => {
-    cloudToken = ''
-    selectedImei = ''
-    cloudMode = false
-    localStorage.removeItem('cloudToken')
-    fetch('/api/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: '' }),
-    }).catch(() => {})
-    $('car-list').innerHTML = ''
-    updateState()
+    clearCloudSession()
     log('已退出云端登录')
   })
 
@@ -561,8 +638,7 @@ function init() {
   function switchTab(t: 'cloud' | 'ble') {
     Object.entries(tabs).forEach(([k, el]) => el.classList.toggle('active', k === t))
     Object.entries(panels).forEach(([k, el]) => (el as HTMLElement).classList.toggle('active', k === t))
-    if (t === 'ble') cloudMode = false
-    else cloudMode = true
+    activeChannel = t
     setConnectionDrawer(true)
     updateState()
   }
@@ -573,14 +649,14 @@ function init() {
   const savedToken = localStorage.getItem('cloudToken')
   if (savedToken) {
     cloudToken = savedToken
-    cloudMode = true
+    activeChannel = 'cloud'
     loadCars()
   } else {
     fetch('/api/token').then(r => r.json()).then(d => {
       if (d.token) {
         cloudToken = d.token
         localStorage.setItem('cloudToken', d.token)
-        cloudMode = true
+        activeChannel = 'cloud'
         loadCars()
       }
     }).catch(() => {})
@@ -589,14 +665,14 @@ function init() {
   // --- Advanced panel ---
   $('advanced-toggle').addEventListener('click', () => {
     const panel = $('advanced-panel')
-    const isHidden = panel.style.display === 'none' || !panel.style.display
-    panel.style.display = isHidden ? 'block' : 'none'
-    $('advanced-toggle').textContent = isHidden ? '工程调试面板 收起' : '工程调试面板 展开'
+    const willOpen = !panel.classList.contains('is-open')
+    panel.classList.toggle('is-open', willOpen)
+    $('advanced-toggle').textContent = willOpen ? '工程调试面板 收起' : '工程调试面板 展开'
   })
 
   document.getElementById('drawer-debug-link')?.addEventListener('click', () => {
     const panel = $('advanced-panel')
-    panel.style.display = 'block'
+    panel.classList.add('is-open')
     $('advanced-toggle').textContent = '工程调试面板 收起'
     panel.scrollIntoView({ behavior: 'smooth', block: 'start' })
   })
