@@ -98,7 +98,7 @@
 
 ## 最终验收
 
-- [ ] 全部修复完成后执行统一验证并上传仓库。
+- [ ] 全部修复完成后执行统一验证，验证通过后才能上传仓库。
   - 问题：单项修复完成不代表整体可发布，仍可能存在构建、移动端布局、控制台、Lighthouse 或 git 状态回归。
   - 建议：所有高/中/低优先级任务完成后，统一执行 `npm run build`、浏览器移动端检查、控制台检查、Lighthouse snapshot mobile 和 `git status` 审计。
-  - 验收：构建通过，控制台无 error/warn，移动端无横向溢出和遮挡，Lighthouse 关键项通过，工作树只包含预期改动；随后提交并推送到 GitHub `ch6vip/tailg-ble-web`。
+  - 验收：构建通过，控制台无 error/warn，移动端无横向溢出和遮挡，Lighthouse 关键项通过，工作树只包含预期改动；只有这些验证全部通过后，才允许提交并推送到 GitHub `ch6vip/tailg-ble-web`。
