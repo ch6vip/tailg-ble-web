@@ -215,6 +215,20 @@ export class TailgBleConnection {
       this.log('\n--- 自动尝试 QGJ 登录 → feb1 ---')
       const loginHex = 'A700000A10010000000000000000'
       await this.writeRaw('feb1', loginHex)
+
+      // 等待 500ms 让登录响应回来，然后尝试发 ECU 指令到 fcc1
+      await new Promise(r => setTimeout(r, 500))
+      if (this._chars.has('fcc1')) {
+        this.log('\n--- 登录后尝试 fcc1 指令 ---')
+        // 尝试读取状态 (TLink 格式: 85 03 C2 0D 00 ...)
+        await this.writeRaw('fcc1', '8503C20D001111111111111100000000')
+        await new Promise(r => setTimeout(r, 500))
+        // 也试试 kuyi V2 格式的 lock 查询
+        await this.writeRaw('fcc1', 'A700000320010000')
+        await new Promise(r => setTimeout(r, 500))
+        // 试试原始 ECU 心跳
+        await this.writeRaw('fcc1', 'D0018E0AFF00000001AA')
+      }
     }
   }
 
