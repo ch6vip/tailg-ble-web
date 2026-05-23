@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>台铃智控移动端效果原型</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='10' fill='%230d1714'/%3E%3Cpath d='M6 20h20l-2.5-6.1A4.6 4.6 0 0 0 19.2 11h-6.4a4.6 4.6 0 0 0-4.3 2.9L6 20Z' fill='%23f8f1df'/%3E%3Ccircle cx='11' cy='22' r='2.1' fill='%232dd4bf'/%3E%3Ccircle cx='21' cy='22' r='2.1' fill='%23f59e0b'/%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --bg: #09110f;
+      --panel: #f7f0df;
+      --panel-2: #e9dec8;
+      --ink: #101a17;
+      --muted: #64726c;
+      --line: rgba(16, 26, 23, 0.12);
+      --cyan: #18b7a4;
+      --cyan-soft: rgba(24, 183, 164, 0.14);
+      --amber: #e79022;
+      --red: #df4a5c;
+      --green: #14a56f;
+      --shadow: 0 26px 70px rgba(0, 0, 0, 0.28);
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      font-family: "Aptos", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 50% -10%, rgba(24, 183, 164, 0.35), transparent 19rem),
+        radial-gradient(circle at 90% 8%, rgba(231, 144, 34, 0.22), transparent 16rem),
+        linear-gradient(180deg, #07100e 0%, #12211d 46%, #ece3d1 46%, #f7f0df 100%);
+    }
+
+    .phone {
+      width: min(100%, 430px);
+      margin: 0 auto;
+      min-height: 100vh;
+      padding: 18px 14px 28px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: #f9f3e4;
+      margin-bottom: 20px;
+    }
+
+    .brand small,
+    .chip small,
+    .metric small,
+    .section-title small {
+      display: block;
+      color: inherit;
+      opacity: 0.62;
+      font-size: 0.72rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .brand strong {
+      display: block;
+      font-size: 1.28rem;
+      letter-spacing: -0.04em;
+      margin-top: 2px;
+    }
+
+    .connect-pill {
+      display: inline-flex;
+      gap: 7px;
+      align-items: center;
+      min-height: 34px;
+      padding: 8px 12px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.08);
+      color: #f9f3e4;
+      font-size: 0.82rem;
+    }
+
+    .dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: var(--green);
+      box-shadow: 0 0 0 5px rgba(20, 165, 111, 0.18);
+    }
+
+    .hero {
+      position: relative;
+      min-height: 250px;
+      color: #f9f3e4;
+    }
+
+    .vehicle-card {
+      position: absolute;
+      inset: auto 0 0;
+      padding: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 34px;
+      background:
+        linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04)),
+        linear-gradient(180deg, rgba(16, 26, 23, 0.76), rgba(7, 16, 14, 0.94));
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .vehicle-card::before {
+      content: "";
+      position: absolute;
+      width: 270px;
+      height: 270px;
+      right: -100px;
+      top: -100px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(24, 183, 164, 0.32), transparent 62%);
+    }
+
+    .vehicle-name {
+      position: relative;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .vehicle-name h1 {
+      margin: 0;
+      font-size: 2.2rem;
+      line-height: 0.96;
+      letter-spacing: -0.08em;
+    }
+
+    .mode-switch {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4px;
+      padding: 4px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      font-size: 0.74rem;
+      white-space: nowrap;
+    }
+
+    .mode-switch span {
+      padding: 7px 9px;
+      border-radius: 999px;
+      color: rgba(249, 243, 228, 0.64);
+    }
+
+    .mode-switch .active {
+      color: var(--ink);
+      background: #f9f3e4;
+      font-weight: 800;
+    }
+
+    .bike-visual {
+      position: relative;
+      height: 84px;
+      margin: 8px 0 18px;
+    }
+
+    .bike-body {
+      position: absolute;
+      left: 10px;
+      right: 10px;
+      bottom: 20px;
+      height: 34px;
+      border-radius: 45px 65px 22px 22px;
+      background: linear-gradient(90deg, #f8f1df, #c7bba2);
+      box-shadow: 0 18px 45px rgba(0, 0, 0, 0.32);
+    }
+
+    .bike-body::before {
+      content: "";
+      position: absolute;
+      left: 52px;
+      top: -28px;
+      width: 90px;
+      height: 42px;
+      border-radius: 70px 70px 12px 12px;
+      border: 9px solid #f8f1df;
+      border-bottom: 0;
+      transform: skewX(-18deg);
+    }
+
+    .wheel {
+      position: absolute;
+      bottom: 2px;
+      width: 46px;
+      height: 46px;
+      border-radius: 50%;
+      border: 8px solid #18231f;
+      outline: 2px solid rgba(255, 255, 255, 0.22);
+      background: var(--cyan);
+    }
+
+    .wheel.left { left: 34px; }
+    .wheel.right { right: 36px; background: var(--amber); }
+
+    .hero-grid {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+    }
+
+    .chip {
+      min-height: 72px;
+      padding: 12px;
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .chip strong {
+      display: block;
+      margin-top: 5px;
+      font-size: 1.05rem;
+    }
+
+    .sheet {
+      margin-top: -12px;
+      padding: 24px 0 0;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .metric {
+      min-height: 116px;
+      padding: 18px;
+      border-radius: 28px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      box-shadow: 0 14px 38px rgba(27, 37, 31, 0.11);
+    }
+
+    .metric strong {
+      display: block;
+      font-size: 2.15rem;
+      line-height: 1;
+      letter-spacing: -0.07em;
+      margin-top: 18px;
+    }
+
+    .metric.accent {
+      background: linear-gradient(145deg, #17342e, #0e1c19);
+      color: #f9f3e4;
+      border-color: rgba(255, 255, 255, 0.08);
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      margin: 18px 2px 11px;
+    }
+
+    .section-title h2 {
+      margin: 0;
+      font-size: 1.18rem;
+      letter-spacing: -0.035em;
+    }
+
+    .command-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+    }
+
+    .cmd {
+      appearance: none;
+      border: 0;
+      min-height: 104px;
+      border-radius: 26px;
+      padding: 13px 10px;
+      background: var(--panel);
+      color: var(--ink);
+      box-shadow: 0 12px 32px rgba(27, 37, 31, 0.1);
+      display: grid;
+      justify-items: center;
+      align-content: center;
+      gap: 10px;
+      font: inherit;
+      font-weight: 800;
+    }
+
+    .cmd:active {
+      transform: translateY(2px) scale(0.98);
+    }
+
+    .cmd-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      background: var(--cyan-soft);
+      color: var(--cyan);
+      font-size: 1.2rem;
+    }
+
+    .cmd.danger .cmd-icon {
+      background: rgba(223, 74, 92, 0.12);
+      color: var(--red);
+    }
+
+    .cmd.warn .cmd-icon {
+      background: rgba(231, 144, 34, 0.16);
+      color: var(--amber);
+    }
+
+    .feedback {
+      margin-top: 14px;
+      display: grid;
+      grid-template-columns: auto 1fr auto;
+      gap: 12px;
+      align-items: center;
+      padding: 14px;
+      border-radius: 24px;
+      background: #101a17;
+      color: #f9f3e4;
+      box-shadow: 0 14px 38px rgba(16, 26, 23, 0.22);
+    }
+
+    .progress {
+      height: 42px;
+      width: 42px;
+      border-radius: 50%;
+      background: conic-gradient(var(--cyan) 76%, rgba(255, 255, 255, 0.14) 0);
+      position: relative;
+    }
+
+    .progress::after {
+      content: "";
+      position: absolute;
+      inset: 7px;
+      border-radius: 50%;
+      background: #101a17;
+    }
+
+    .feedback strong,
+    .debug strong {
+      display: block;
+      margin-bottom: 3px;
+    }
+
+    .feedback span,
+    .debug span {
+      color: rgba(249, 243, 228, 0.64);
+      font-size: 0.82rem;
+    }
+
+    .debug {
+      margin-top: 14px;
+      padding: 16px;
+      border-radius: 26px;
+      background: linear-gradient(145deg, #222f2a, #111a17);
+      color: #f9f3e4;
+    }
+
+    .debug-row {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .debug-code {
+      margin-top: 13px;
+      padding: 12px;
+      border-radius: 18px;
+      background: rgba(0, 0, 0, 0.24);
+      color: #8ff0df;
+      font-family: "Cascadia Mono", Consolas, monospace;
+      font-size: 0.75rem;
+      line-height: 1.55;
+      max-height: 86px;
+      overflow: hidden;
+    }
+
+    .floating {
+      position: sticky;
+      bottom: 12px;
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px 10px 10px 16px;
+      border-radius: 999px;
+      background: rgba(247, 240, 223, 0.9);
+      border: 1px solid rgba(16, 26, 23, 0.12);
+      box-shadow: 0 20px 48px rgba(27, 37, 31, 0.2);
+      backdrop-filter: blur(16px);
+    }
+
+    .floating span {
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+
+    .floating button {
+      border: 0;
+      border-radius: 999px;
+      background: var(--ink);
+      color: #f9f3e4;
+      padding: 11px 14px;
+      font-weight: 800;
+    }
+
+    @media (prefers-reduced-motion: no-preference) {
+      .vehicle-card {
+        animation: rise 520ms cubic-bezier(.2, .8, .2, 1) both;
+      }
+
+      .metric,
+      .cmd,
+      .feedback,
+      .debug {
+        animation: fade-up 460ms cubic-bezier(.2, .8, .2, 1) both;
+      }
+
+      .metric:nth-child(2) { animation-delay: 40ms; }
+      .cmd:nth-child(2) { animation-delay: 40ms; }
+      .cmd:nth-child(3) { animation-delay: 80ms; }
+      .cmd:nth-child(4) { animation-delay: 120ms; }
+      .cmd:nth-child(5) { animation-delay: 160ms; }
+      .cmd:nth-child(6) { animation-delay: 200ms; }
+
+      @keyframes rise {
+        from { opacity: 0; transform: translateY(18px) scale(0.98); }
+        to { opacity: 1; transform: translateY(0) scale(1); }
+      }
+
+      @keyframes fade-up {
+        from { opacity: 0; transform: translateY(14px); }
+        to { opacity: 1; transform: translateY(0); }
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="phone">
+    <header class="topbar">
+      <div class="brand">
+        <small>TAILG CONTROL</small>
+        <strong>移动控车原型</strong>
+      </div>
+      <div class="connect-pill"><span class="dot"></span> 已认证</div>
+    </header>
+
+    <section class="hero" aria-label="车辆总览">
+      <div class="vehicle-card">
+        <div class="vehicle-name">
+          <div>
+            <h1>台铃<br />智控车</h1>
+          </div>
+          <div class="mode-switch">
+            <span class="active">云端</span>
+            <span>蓝牙</span>
+          </div>
+        </div>
+        <div class="bike-visual" aria-hidden="true">
+          <div class="bike-body"></div>
+          <div class="wheel left"></div>
+          <div class="wheel right"></div>
+        </div>
+        <div class="hero-grid">
+          <div class="chip"><small>安防</small><strong>已设防</strong></div>
+          <div class="chip"><small>电门</small><strong>已断电</strong></div>
+          <div class="chip"><small>链路</small><strong>Cloud</strong></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sheet">
+      <div class="metrics">
+        <div class="metric accent">
+          <small>电池余量</small>
+          <strong>82%</strong>
+        </div>
+        <div class="metric">
+          <small>实时电压</small>
+          <strong>54.6V</strong>
+        </div>
+      </div>
+
+      <div class="section-title">
+        <div>
+          <small>Primary actions</small>
+          <h2>常用控车</h2>
+        </div>
+        <small>长按危险动作</small>
+      </div>
+
+      <div class="command-grid" aria-label="控车命令">
+        <button class="cmd"><span class="cmd-icon">开</span><span>解防</span></button>
+        <button class="cmd"><span class="cmd-icon">电</span><span>上电</span></button>
+        <button class="cmd warn"><span class="cmd-icon">鸣</span><span>寻车</span></button>
+        <button class="cmd danger"><span class="cmd-icon">锁</span><span>设防</span></button>
+        <button class="cmd danger"><span class="cmd-icon">停</span><span>断电</span></button>
+        <button class="cmd"><span class="cmd-icon">座</span><span>坐垫</span></button>
+      </div>
+
+      <div class="feedback" aria-label="命令反馈">
+        <div class="progress"></div>
+        <div>
+          <strong>正在执行：一键上电</strong>
+          <span>命令已发送，等待车辆回执。失败时保留重试入口。</span>
+        </div>
+        <strong>76%</strong>
+      </div>
+
+      <section class="debug" aria-label="调试抽屉摘要">
+        <div class="debug-row">
+          <div>
+            <strong>调试面板已收起</strong>
+            <span>Hex、QGJ 授权、状态帧保留给工程模式</span>
+          </div>
+          <span>展开</span>
+        </div>
+        <div class="debug-code">
+          [20:18:02] Cloud command: start<br />
+          [20:18:03] BLE state: authenticated<br />
+          [20:18:03] RX: command success
+        </div>
+      </section>
+
+      <div class="floating">
+        <span>原型只展示前端效果，不连接真实车辆。</span>
+        <button>确认方向</button>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

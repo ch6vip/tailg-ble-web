@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="台铃智控">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#09110f"/>
+      <stop offset="1" stop-color="#17342e"/>
+    </linearGradient>
+    <linearGradient id="bike" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#f8f1df"/>
+      <stop offset="1" stop-color="#c7bba2"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="118" fill="url(#bg)"/>
+  <circle cx="384" cy="116" r="94" fill="#18b7a4" opacity=".24"/>
+  <path d="M88 318h336l-43-105a74 74 0 0 0-69-46H200a74 74 0 0 0-69 46L88 318Z" fill="url(#bike)"/>
+  <path d="M184 188h128c33 0 62 21 72 52l18 56H110l22-58c9-30 30-50 52-50Z" fill="#fff8e8" opacity=".34"/>
+  <circle cx="176" cy="348" r="46" fill="#111a17" stroke="#f8f1df" stroke-width="18"/>
+  <circle cx="336" cy="348" r="46" fill="#111a17" stroke="#f8f1df" stroke-width="18"/>
+  <circle cx="176" cy="348" r="18" fill="#18b7a4"/>
+  <circle cx="336" cy="348" r="18" fill="#e79022"/>
+  <path d="M174 160h128c18 0 31 17 26 34l-5 18H153l8-26c4-15 8-26 13-26Z" fill="#f8f1df"/>
+</svg>

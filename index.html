@@ -2,306 +2,241 @@
 <html lang="zh-CN">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="台铃车辆移动端控制台，支持云端智联、蓝牙直连、车辆状态查看和常用控车。" />
+  <meta name="theme-color" content="#09110f" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-title" content="台铃智控" />
   <title>台铃智控</title>
-  <style>
-    :root {
-      --bg-color: #0b0f19;
-      --card-bg: rgba(30, 41, 59, 0.7);
-      --card-border: rgba(255, 255, 255, 0.08);
-      --primary: #0ea5e9;
-      --primary-glow: rgba(14, 165, 233, 0.4);
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --danger: #f43f5e;
-      --success: #10b981;
-      --warning: #f59e0b;
-    }
-
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
-
-    body {
-      background: var(--bg-color);
-      background-image: radial-gradient(circle at 50% 0%, #1e293b 0%, transparent 70%);
-      color: var(--text-main);
-      min-height: 100vh;
-      display: flex;
-      justify-content: center;
-    }
-
-    .app { width: 100%; max-width: 480px; padding: 20px 16px 80px; position: relative; }
-
-    .header { text-align: center; margin-bottom: 24px; margin-top: 10px;}
-    .header h1 { font-size: 1.4em; font-weight: 600; letter-spacing: 1px; color: var(--text-main); }
-
-    .tabs {
-      display: flex; background: rgba(0,0,0,0.3); border-radius: 12px; padding: 4px; margin-bottom: 24px;
-      border: 1px solid var(--card-border);
-    }
-    .tab {
-      flex: 1; padding: 10px 0; text-align: center; font-size: 0.9em; font-weight: 500; color: var(--text-muted);
-      cursor: pointer; border-radius: 8px; transition: all 0.3s ease;
-    }
-    .tab.active { background: var(--card-bg); color: var(--primary); box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-
-    .panel { display: none; animation: fadeIn 0.3s ease; }
-    .panel.active { display: block; }
-    @keyframes fadeIn { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-
-    .card {
-      background: var(--card-bg); border: 1px solid var(--card-border); border-radius: 16px;
-      padding: 20px; margin-bottom: 16px; backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
-    }
-
-    .form-row { display: flex; gap: 12px; margin-bottom: 16px; }
-    .form-input {
-      flex: 1; background: rgba(0,0,0,0.2); color: var(--text-main); border: 1px solid var(--card-border);
-      border-radius: 10px; padding: 12px 16px; font-size: 0.95em; outline: none; transition: border 0.3s;
-    }
-    .form-input:focus { border-color: var(--primary); box-shadow: 0 0 0 2px var(--primary-glow); }
-
-    .btn {
-      background: rgba(255,255,255,0.05); color: var(--text-main); border: 1px solid var(--card-border);
-      border-radius: 10px; padding: 12px 20px; font-size: 0.9em; font-weight: 500; cursor: pointer; transition: all 0.2s;
-    }
-    .btn:active:not(:disabled) { transform: scale(0.96); }
-    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-    .btn-primary { background: var(--primary); color: #fff; border: none; box-shadow: 0 4px 12px var(--primary-glow); }
-
-    .cloud-status { display: flex; align-items: center; gap: 8px; font-size: 0.85em; color: var(--text-muted); justify-content: center;}
-    .cloud-status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); box-shadow: 0 0 8px currentColor; }
-    .cloud-status .dot.online { background: var(--success); color: var(--success); }
-
-    .car-item {
-      background: rgba(0,0,0,0.2); border: 1px solid transparent; border-radius: 12px; padding: 16px;
-      margin-top: 12px; cursor: pointer; transition: all 0.3s;
-    }
-    .car-item.selected { border-color: var(--primary); background: rgba(14, 165, 233, 0.1); }
-    .car-item .car-name { font-weight: 600; font-size: 1.05em; margin-bottom: 6px;}
-    .car-item .car-info { font-size: 0.8em; color: var(--text-muted); line-height: 1.4;}
-
-    .ble-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; font-size: 0.9em; }
-    .ble-row label { color: var(--text-muted); }
-    .ble-row span { font-weight: 500; }
-    .ble-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 20px; }
-
-    select#model-select {
-      background: rgba(0,0,0,0.2); color: var(--text-main); border: 1px solid var(--card-border);
-      border-radius: 8px; padding: 6px 12px; font-size: 0.9em; outline: none;
-    }
-
-    .dashboard { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
-    .dash-box {
-      background: linear-gradient(145deg, rgba(255,255,255,0.05), rgba(0,0,0,0.2));
-      border: 1px solid var(--card-border); border-radius: 16px; padding: 20px; text-align: center;
-      display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 8px;
-    }
-    .dash-box .val { font-size: 1.8em; font-weight: 700; color: var(--primary); text-shadow: 0 0 16px var(--primary-glow); }
-    .dash-box .label { font-size: 0.75em; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px;}
-    .dash-wide { grid-column: span 2; display: flex; flex-direction: row; justify-content: space-between; padding: 16px 24px; }
-    .dash-wide .val { font-size: 1.2em; font-weight: 600; color: var(--text-main); text-shadow: none; }
-
-    .ctrl-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
-    .ctrl-btn {
-      display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
-      background: rgba(0,0,0,0.3); border: 1px solid var(--card-border); border-radius: 16px;
-      aspect-ratio: 1; cursor: pointer; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .ctrl-btn:active:not(:disabled) { transform: scale(0.92); }
-    .ctrl-btn:disabled { opacity: 0.3; cursor: not-allowed; filter: grayscale(1); }
-    .ctrl-btn .icon { font-size: 1.8em; }
-    .ctrl-btn .text { font-size: 0.75em; font-weight: 500; color: var(--text-muted); }
-
-    .ctrl-btn.green .icon { color: var(--success); text-shadow: 0 0 10px rgba(16, 185, 129, 0.4); }
-    .ctrl-btn.green:active:not(:disabled) { border-color: var(--success); background: rgba(16, 185, 129, 0.1); }
-    .ctrl-btn.red .icon { color: var(--danger); text-shadow: 0 0 10px rgba(244, 63, 94, 0.4); }
-    .ctrl-btn.red:active:not(:disabled) { border-color: var(--danger); background: rgba(244, 63, 94, 0.1); }
-    .ctrl-btn.yellow .icon { color: var(--warning); text-shadow: 0 0 10px rgba(245, 158, 11, 0.4); }
-    .ctrl-btn.blue .icon { color: var(--primary); text-shadow: 0 0 10px var(--primary-glow); }
-
-    .advanced-toggle {
-      width: 100%; background: none; border: none; color: var(--text-muted); padding: 16px;
-      font-size: 0.85em; cursor: pointer; text-align: center; margin-top: 10px; font-weight: 500;
-    }
-    .advanced-panel { display: none; animation: fadeIn 0.3s; }
-    .raw-row { display: flex; gap: 8px; margin-bottom: 12px; }
-    .raw-input { flex: 1; font-family: monospace; }
-    textarea#log {
-      width: 100%; height: 150px; background: rgba(0,0,0,0.5); color: var(--success);
-      border: 1px solid var(--card-border); border-radius: 10px; padding: 12px;
-      font-family: 'Consolas', monospace; font-size: 0.75em; resize: vertical; line-height: 1.4;
-    }
-    .log-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 0.85em; color: var(--text-muted);}
-
-    .state-disconnected { color: var(--danger); }
-    .state-connecting { color: var(--warning); animation: pulse 1.5s infinite; }
-    .state-connected { color: var(--primary); }
-    .state-authenticated { color: var(--success); text-shadow: 0 0 8px rgba(16, 185, 129, 0.4); }
-    @keyframes pulse { 50% { opacity: 0.5; } }
-
-    .lock-screen {
-      position: fixed; inset: 0; background: rgba(11, 15, 25, 0.85); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-      display: flex; align-items: center; justify-content: center; z-index: 999;
-    }
-    .lock-box { text-align: center; width: 300px; }
-    .lock-box h2 { color: var(--text-main); margin-bottom: 30px; font-size: 1.8em; font-weight: 600; letter-spacing: 2px;}
-    .lock-box input {
-      width: 100%; background: rgba(255,255,255,0.05); color: var(--text-main); border: 2px solid transparent;
-      border-radius: 12px; padding: 16px; font-size: 1.2em; text-align: center; outline: none; margin-bottom: 20px;
-      letter-spacing: 4px; transition: all 0.3s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.2);
-    }
-    .lock-box input:focus { border-color: var(--primary); background: rgba(0,0,0,0.3); }
-    .lock-box button {
-      width: 100%; background: var(--primary); color: #fff; border: none; border-radius: 12px;
-      padding: 16px; font-size: 1.05em; font-weight: 600; cursor: pointer; box-shadow: 0 4px 16px var(--primary-glow);
-    }
-    .lock-box .error { color: var(--danger); font-size: 0.85em; margin-top: 12px; display: none; }
-  </style>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='10' fill='%2309100f'/%3E%3Cpath d='M6 20h20l-2.5-6.1A4.6 4.6 0 0 0 19.2 11h-6.4a4.6 4.6 0 0 0-4.3 2.9L6 20Z' fill='%23f8f1df'/%3E%3Ccircle cx='11' cy='22' r='2.1' fill='%2318b7a4'/%3E%3Ccircle cx='21' cy='22' r='2.1' fill='%23e79022'/%3E%3C/svg%3E" />
+  <link rel="manifest" href="/manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="/icon.svg" />
+  <link rel="stylesheet" href="/src/styles.css" />
 </head>
 <body>
   <div class="lock-screen" id="lock-screen">
     <div class="lock-box">
-      <h2>TAILG UI</h2>
-      <input id="lock-pwd" type="password" placeholder="ENTER PIN" />
-      <button id="lock-btn">Authenticate</button>
+      <span class="lock-kicker">TAILG CONTROL</span>
+      <h2>安全验证</h2>
+      <input id="lock-pwd" type="password" placeholder="输入访问密码" />
+      <button id="lock-btn">进入控车台</button>
       <div class="error" id="lock-error">密码验证失败</div>
     </div>
   </div>
 
-  <div class="app" style="display:none">
-    <div class="header"><h1>智能中控</h1></div>
-
-    <div class="tabs">
-      <div class="tab active" id="tab-cloud">云端智联</div>
-      <div class="tab" id="tab-ble">蓝牙直连</div>
-    </div>
-
-    <div class="panel active" id="panel-cloud">
-      <div class="card">
-        <div class="form-row">
-          <input id="phone-input" class="form-input" type="tel" placeholder="手机号码" />
-          <button id="btn-get-code" class="btn">获取验证码</button>
-        </div>
-        <div class="form-row">
-          <input id="sms-input" class="form-input" type="text" placeholder="短信验证码" />
-          <button id="btn-cloud-login" class="btn btn-primary">验证登录</button>
-          <button id="btn-cloud-logout" class="btn" style="display:none">断开连接</button>
-        </div>
-        <div class="cloud-status">
-          <div class="dot" id="cloud-dot"></div>
-          <span id="cloud-state">离线模式</span>
-        </div>
-        <div id="car-list"></div>
+  <main class="app" style="display:none">
+    <header class="topbar">
+      <div class="brand">
+        <small>TAILG CONTROL</small>
+        <strong>智能中控</strong>
       </div>
-    </div>
-    <div class="panel" id="panel-ble">
-      <div class="card">
-        <div class="ble-row">
-          <label>车辆协议</label>
-          <select id="model-select">
-            <option value="KKS">KKS (默认主控)</option>
-            <option value="BB">BB (保镖)</option>
-            <option value="AX">AX (安芯)</option>
-            <option value="JD">JD (极大)</option>
-            <option value="HJ">HJ (宏基)</option>
-            <option value="JW">JW / C39</option>
-            <option value="XL">XL (西联)</option>
-            <option value="YY">YY (亿源)</option>
-          </select>
+      <div class="connect-pill">
+        <span class="dot" id="cloud-dot"></span>
+        <span id="cloud-state">离线模式</span>
+      </div>
+    </header>
+
+    <section class="hero-card" aria-label="车辆总览">
+      <div class="hero-head">
+        <div>
+          <small>当前车辆</small>
+          <h1 id="vehicle-title">台铃智控车</h1>
         </div>
-        <div class="ble-row">
-          <label>通信链路</label>
-          <span id="conn-state" class="state-disconnected">未连接</span>
-        </div>
-        <div class="ble-row">
-          <label>目标设备</label>
-          <span id="device-name">-</span>
-        </div>
-        <div class="ble-row">
-          <label>握手令牌</label>
-          <span id="token-val" style="font-family:monospace;font-size:0.8em;color:var(--text-muted)">-</span>
-        </div>
-        <div class="ble-btns">
-          <button id="btn-scan" class="btn btn-primary">快连配对</button>
-          <button id="btn-scan-all" class="btn">全频扫描</button>
-          <button id="btn-diagnose" class="btn">深度诊断</button>
-          <button id="btn-disconnect" class="btn">切断连接</button>
+        <div class="tabs mode-switch" aria-label="控制模式">
+          <button class="tab active" id="tab-cloud" type="button">云端</button>
+          <button class="tab" id="tab-ble" type="button">蓝牙</button>
         </div>
       </div>
-    </div>
 
-    <div class="dashboard">
-      <div class="dash-box">
-        <div class="val" id="battery-val">--</div>
-        <div class="label">电池余量</div>
+      <div class="bike-visual" aria-hidden="true">
+        <div class="bike-body"></div>
+        <div class="wheel left"></div>
+        <div class="wheel right"></div>
       </div>
-      <div class="dash-box">
-        <div class="val" id="voltage-val">--</div>
-        <div class="label">实时电压</div>
-      </div>
-      <div class="dash-box dash-wide">
-        <div class="label">安防状态</div>
-        <div class="val" id="lock-state">-</div>
-      </div>
-      <div class="dash-box dash-wide" style="margin-top: -12px;">
-        <div class="label">电门引擎</div>
-        <div class="val" id="power-state">-</div>
-      </div>
-    </div>
 
-    <div class="card">
-      <div class="ctrl-grid">
-        <button class="ctrl-btn green cmd-btn" data-cmd="02" disabled>
-          <span class="icon">🔓</span><span class="text">解防解锁</span>
-        </button>
-        <button class="ctrl-btn green cmd-btn" data-cmd="06" disabled>
-          <span class="icon">⚡</span><span class="text">一键上电</span>
-        </button>
-        <button class="ctrl-btn yellow cmd-btn" data-cmd="08" disabled>
-          <span class="icon">🔔</span><span class="text">寻车呼叫</span>
-        </button>
-        <button class="ctrl-btn red cmd-btn" data-cmd="01" disabled>
-          <span class="icon">🔒</span><span class="text">安全设防</span>
-        </button>
-        <button class="ctrl-btn red cmd-btn" data-cmd="07" disabled>
-          <span class="icon">🛑</span><span class="text">切断电门</span>
-        </button>
-        <button class="ctrl-btn blue cmd-btn" data-cmd="05" disabled>
-          <span class="icon">💺</span><span class="text">开启坐垫</span>
-        </button>
-      </div>
-    </div>
-
-    <button class="advanced-toggle" id="advanced-toggle">参数调试面板 ⏷</button>
-
-    <div class="advanced-panel" id="advanced-panel">
-      <div class="card">
-        <div class="raw-row">
-          <select id="char-select" class="form-input" style="flex: 0.3; padding: 8px;">
-            <option value="fe02">fe02</option>
-            <option value="fcc1">fcc1</option>
-          </select>
-          <input id="hex-input" class="form-input raw-input" type="text" placeholder="Hex Code..." />
-          <button id="btn-send-raw" class="btn">TX</button>
+      <div class="hero-grid">
+        <div class="status-chip">
+          <small>安防状态</small>
+          <strong id="lock-state">-</strong>
         </div>
-        <div class="raw-row">
-          <button id="btn-qgj-login" class="btn" style="flex:1; font-size:0.8em">QGJ 授权</button>
-          <button class="btn cmd-btn" data-cmd="0D" disabled style="flex:1; font-size:0.8em">状态帧</button>
-          <button class="btn cmd-btn" data-cmd="0E" disabled style="flex:1; font-size:0.8em">防盗帧</button>
+        <div class="status-chip">
+          <small>电门引擎</small>
+          <strong id="power-state">-</strong>
         </div>
+        <div class="status-chip">
+          <small>通信链路</small>
+          <strong id="conn-state" class="state-disconnected">未连接</strong>
+        </div>
+      </div>
+    </section>
 
-        <div class="log-header">
-          <span>终端日志</span>
-          <div style="display:flex; gap:8px;">
-            <button id="btn-copy-log" class="btn" style="padding: 4px 10px; font-size:0.8em">复制</button>
-            <button id="btn-clear-log" class="btn" style="padding: 4px 10px; font-size:0.8em">清空</button>
+    <section class="sheet">
+      <div class="dashboard">
+        <div class="dash-box metric accent">
+          <div class="label">电池余量</div>
+          <div class="val" id="battery-val">--</div>
+        </div>
+        <div class="dash-box metric">
+          <div class="label">实时电压</div>
+          <div class="val" id="voltage-val">--</div>
+        </div>
+        <div class="dash-box dash-wide sr-state">
+          <div class="label">安防状态</div>
+          <div class="val mirror-lock">-</div>
+        </div>
+        <div class="dash-box dash-wide sr-state">
+          <div class="label">电门引擎</div>
+          <div class="val mirror-power">-</div>
+        </div>
+      </div>
+
+      <div class="section-title">
+        <div>
+          <small>Primary actions</small>
+          <h2>常用控车</h2>
+        </div>
+        <small>危险动作谨慎操作</small>
+      </div>
+
+      <section class="control-card card" aria-label="控车命令">
+        <div class="ctrl-grid">
+          <button class="ctrl-btn green cmd-btn" data-cmd="02" disabled type="button">
+            <span class="icon">开</span><span class="text">解防</span>
+          </button>
+          <button class="ctrl-btn green cmd-btn" data-cmd="06" disabled type="button">
+            <span class="icon">电</span><span class="text">上电</span>
+          </button>
+          <button class="ctrl-btn yellow cmd-btn" data-cmd="08" disabled type="button">
+            <span class="icon">鸣</span><span class="text">寻车</span>
+          </button>
+          <button class="ctrl-btn red cmd-btn" data-cmd="01" disabled type="button">
+            <span class="icon">锁</span><span class="text">设防</span>
+          </button>
+          <button class="ctrl-btn red cmd-btn" data-cmd="07" disabled type="button">
+            <span class="icon">停</span><span class="text">断电</span>
+          </button>
+          <button class="ctrl-btn blue cmd-btn" data-cmd="05" disabled type="button">
+            <span class="icon">座</span><span class="text">坐垫</span>
+          </button>
+        </div>
+      </section>
+
+      <div class="feedback" aria-live="polite">
+        <div class="progress"></div>
+        <div>
+          <strong id="command-feedback-title">等待控车指令</strong>
+          <span id="command-feedback-text">连接车辆或登录云端后即可使用常用控车。</span>
+        </div>
+        <strong id="command-feedback-mark">Idle</strong>
+      </div>
+
+      <button class="connection-toggle" id="connection-toggle" type="button">连接设置 展开</button>
+
+      <div class="connection-drawer" id="connection-drawer">
+        <section class="panel active connect-panel" id="panel-cloud">
+          <div class="card panel-card">
+            <div class="panel-title">
+              <div>
+                <small>Cloud link</small>
+                <h2>云端智联</h2>
+              </div>
+              <span>验证码登录</span>
+            </div>
+            <div class="form-row">
+              <input id="phone-input" class="form-input" type="tel" placeholder="手机号码" />
+              <button id="btn-get-code" class="btn" type="button">获取验证码</button>
+            </div>
+            <div class="form-row">
+              <input id="sms-input" class="form-input" type="text" placeholder="短信验证码" />
+              <button id="btn-cloud-login" class="btn btn-primary" type="button">验证登录</button>
+              <button id="btn-cloud-logout" class="btn" style="display:none" type="button">断开连接</button>
+            </div>
+            <div id="car-list" class="car-list"></div>
           </div>
-        </div>
-        <textarea id="log" readonly placeholder="Awaiting telemetry..."></textarea>
+        </section>
+
+        <section class="panel connect-panel" id="panel-ble">
+          <div class="card panel-card">
+            <div class="panel-title">
+              <div>
+                <small>Bluetooth link</small>
+                <h2>蓝牙直连</h2>
+              </div>
+              <span id="device-name">-</span>
+            </div>
+            <div class="ble-row">
+              <label>车辆协议</label>
+              <select id="model-select">
+                <option value="KKS">KKS (默认主控)</option>
+                <option value="BB">BB (保镖)</option>
+                <option value="AX">AX (安芯)</option>
+                <option value="JD">JD (极大)</option>
+                <option value="HJ">HJ (宏基)</option>
+                <option value="JW">JW / C39</option>
+                <option value="XL">XL (西联)</option>
+                <option value="YY">YY (亿源)</option>
+              </select>
+            </div>
+            <div class="ble-row token-row">
+              <label>握手令牌</label>
+              <span id="token-val">-</span>
+            </div>
+            <div class="ble-btns">
+              <button id="btn-scan" class="btn btn-primary" type="button">快连配对</button>
+              <button id="btn-scan-all" class="btn" type="button">全频扫描</button>
+              <button id="btn-diagnose" class="btn" type="button">深度诊断</button>
+              <button id="btn-disconnect" class="btn" type="button">切断连接</button>
+            </div>
+          </div>
+        </section>
       </div>
-    </div>
-  </div>
+
+      <button class="advanced-toggle" id="advanced-toggle" type="button">工程调试面板 展开</button>
+
+      <section class="advanced-panel debug-drawer" id="advanced-panel">
+        <div class="card">
+          <div class="panel-title">
+            <div>
+              <small>Engineering mode</small>
+              <h2>参数调试</h2>
+            </div>
+            <span>默认收起</span>
+          </div>
+          <div class="raw-row">
+            <select id="char-select" class="form-input">
+              <option value="fe02">fe02</option>
+              <option value="fcc1">fcc1</option>
+            </select>
+            <input id="hex-input" class="form-input raw-input" type="text" placeholder="Hex Code..." />
+            <button id="btn-send-raw" class="btn" type="button">TX</button>
+          </div>
+          <div class="raw-row">
+            <button id="btn-qgj-login" class="btn" type="button">QGJ 授权</button>
+            <button class="btn cmd-btn" data-cmd="0D" disabled type="button">状态帧</button>
+            <button class="btn cmd-btn" data-cmd="0E" disabled type="button">防盗帧</button>
+          </div>
+          <div class="log-header">
+            <span>终端日志</span>
+            <div>
+              <button id="btn-copy-log" class="btn mini" type="button">复制</button>
+              <button id="btn-clear-log" class="btn mini" type="button">清空</button>
+            </div>
+          </div>
+          <textarea id="log" readonly placeholder="Awaiting telemetry..."></textarea>
+        </div>
+      </section>
+
+      <div class="floating">
+        <span>前端已按移动控车优先重排，协议链路保持不变。</span>
+        <div class="floating-actions">
+          <button type="button" id="quick-connect">连接</button>
+          <button type="button" id="quick-debug">调试</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
   <script type="module" src="/src/main.ts"></script>
 </body>
 </html>

@@ -1,0 +1,20 @@
+{
+  "name": "台铃智控",
+  "short_name": "台铃智控",
+  "description": "移动端台铃车辆控制台",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#09110f",
+  "theme_color": "#09110f",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "productivity"]
+}

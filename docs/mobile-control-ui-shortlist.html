@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>移动端控车前端参考筛选</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='9' fill='%2316211d'/%3E%3Cpath d='M7 19h18l-2.1-5.2A4.5 4.5 0 0 0 18.7 11h-5.4a4.5 4.5 0 0 0-4.2 2.8L7 19Z' fill='%23fffaf0'/%3E%3Ccircle cx='11' cy='21' r='2.2' fill='%230f766e'/%3E%3Ccircle cx='21' cy='21' r='2.2' fill='%23d97706'/%3E%3C/svg%3E" />
+  <style>
+    :root {
+      --ink: #16211d;
+      --muted: #5d6b63;
+      --paper: #f4f0e8;
+      --card: rgba(255, 252, 244, 0.88);
+      --line: rgba(22, 33, 29, 0.14);
+      --accent: #0f766e;
+      --accent-2: #d97706;
+      --danger: #be123c;
+      --shadow: 0 24px 70px rgba(36, 47, 42, 0.16);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      font-family: "Aptos", "Segoe UI", sans-serif;
+      background:
+        radial-gradient(circle at 12% 14%, rgba(15, 118, 110, 0.18), transparent 28rem),
+        radial-gradient(circle at 92% 4%, rgba(217, 119, 6, 0.18), transparent 24rem),
+        linear-gradient(135deg, #f8f4ea 0%, #e7ece3 100%);
+      min-height: 100vh;
+    }
+
+    main {
+      width: min(1180px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 48px 0 72px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.2fr) minmax(280px, 0.8fr);
+      gap: 28px;
+      align-items: end;
+      margin-bottom: 28px;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(2.2rem, 7vw, 5rem);
+      line-height: 0.92;
+      letter-spacing: -0.07em;
+      max-width: 760px;
+    }
+
+    .lede {
+      margin: 18px 0 0;
+      color: var(--muted);
+      font-size: 1.02rem;
+      line-height: 1.75;
+      max-width: 760px;
+    }
+
+    .status-card,
+    .candidate,
+    .decision {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 28px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .status-card {
+      padding: 24px;
+    }
+
+    .status-card strong {
+      display: block;
+      font-size: 0.82rem;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 10px;
+    }
+
+    .status-card p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .current {
+      display: grid;
+      grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+      gap: 24px;
+      align-items: center;
+      margin: 30px 0;
+      padding: 26px;
+      background: rgba(22, 33, 29, 0.9);
+      color: #fffaf0;
+      border-radius: 34px;
+      box-shadow: 0 28px 80px rgba(15, 23, 20, 0.28);
+    }
+
+    .current h2,
+    .decision h2 {
+      margin: 0 0 12px;
+      font-size: clamp(1.7rem, 4vw, 3rem);
+      line-height: 1;
+      letter-spacing: -0.045em;
+    }
+
+    .current p {
+      color: rgba(255, 250, 240, 0.74);
+      line-height: 1.7;
+      margin: 0 0 16px;
+    }
+
+    .metrics {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      min-height: 34px;
+      padding: 7px 12px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.13);
+      font-size: 0.88rem;
+      color: rgba(255, 250, 240, 0.88);
+    }
+
+    .current img,
+    .candidate img {
+      width: 100%;
+      border-radius: 22px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      background: #fff;
+      display: block;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .ranking {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      margin: 0 0 18px;
+    }
+
+    .rank {
+      background: rgba(255, 252, 244, 0.74);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      padding: 16px;
+    }
+
+    .rank span {
+      display: inline-grid;
+      place-items: center;
+      width: 30px;
+      height: 30px;
+      border-radius: 999px;
+      background: var(--ink);
+      color: #fffaf0;
+      font-weight: 800;
+      margin-bottom: 12px;
+    }
+
+    .rank b {
+      display: block;
+      margin-bottom: 7px;
+    }
+
+    .rank p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 0.92rem;
+    }
+
+    .candidate {
+      padding: 18px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .candidate.featured {
+      grid-column: 1 / -1;
+      grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+      align-items: center;
+    }
+
+    .tagline {
+      color: var(--accent-2);
+      font-size: 0.78rem;
+      font-weight: 700;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      margin-bottom: 10px;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 1.45rem;
+      letter-spacing: -0.035em;
+    }
+
+    .candidate p,
+    .decision p {
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.62;
+    }
+
+    .facts {
+      display: grid;
+      gap: 8px;
+      margin-top: 14px;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .facts b {
+      color: var(--ink);
+    }
+
+    .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    a {
+      color: inherit;
+      text-decoration: none;
+    }
+
+    .link {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 38px;
+      padding: 8px 13px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.5);
+      color: var(--ink);
+      font-weight: 700;
+      font-size: 0.9rem;
+    }
+
+    .link.primary {
+      background: var(--ink);
+      color: #fffaf0;
+      border-color: var(--ink);
+    }
+
+    .decision {
+      margin-top: 24px;
+      padding: 28px;
+    }
+
+    .secondary {
+      margin-top: 22px;
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .secondary-item {
+      border: 1px dashed rgba(22, 33, 29, 0.24);
+      border-radius: 22px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.34);
+    }
+
+    .secondary-item b {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--ink);
+    }
+
+    .secondary-item p {
+      margin: 0 0 10px;
+      color: var(--muted);
+      line-height: 1.55;
+      font-size: 0.94rem;
+    }
+
+    .paths {
+      margin-top: 16px;
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+    }
+
+    .path {
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      padding: 16px;
+      background: rgba(255, 255, 255, 0.42);
+    }
+
+    .path b {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--accent);
+    }
+
+    .path:nth-child(3) b {
+      color: var(--danger);
+    }
+
+    .chooser {
+      margin-top: 16px;
+      padding: 18px;
+      border-radius: 22px;
+      background: rgba(22, 33, 29, 0.06);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .chooser b {
+      color: var(--ink);
+    }
+
+    @media (max-width: 820px) {
+      main {
+        width: min(100% - 22px, 560px);
+        padding-top: 28px;
+      }
+
+      .hero,
+      .current,
+      .candidate.featured,
+      .grid,
+      .paths,
+      .ranking,
+      .secondary {
+        grid-template-columns: 1fr;
+      }
+
+      .current {
+        padding: 18px;
+        border-radius: 28px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <section class="hero">
+      <div>
+        <h1>移动端控车前端参考筛选</h1>
+        <p class="lede">目标是先确认视觉与结构方向，不直接改控车功能。筛选标准是移动端友好、性能优先、可预览、与 BLE/IoT/车辆控制结构相近。</p>
+      </div>
+      <aside class="status-card">
+        <strong>当前建议</strong>
+        <p>保留当前 Vite + TypeScript + 原生 DOM 架构，不引入 React/Vue 大框架。UI 做产品化重构，协议、BLE、云控链路保持边界稳定。</p>
+      </aside>
+    </section>
+
+    <section class="current">
+      <div>
+        <h2>当前项目基线</h2>
+        <p>当前页面已经是轻量移动端控车雏形，但更偏工程调试页。优势是无 UI 框架、依赖少、构建快；短板是首屏信息层级、车控反馈、按钮专业感和调试功能隔离。</p>
+        <div class="metrics">
+          <span class="pill">Vite 5 + TypeScript</span>
+          <span class="pill">运行依赖仅 aes-js</span>
+          <span class="pill">JS gzip 约 25KB</span>
+          <span class="pill">构建约 390ms</span>
+        </div>
+      </div>
+      <a href="../tailg-current.png" target="_blank" rel="noreferrer">
+        <img src="../tailg-current.png" alt="当前台铃智控页面截图" />
+      </a>
+    </section>
+
+    <section class="ranking" aria-label="最终推荐排序">
+      <div class="rank">
+        <span>1</span>
+        <b>Vehicle Status Card</b>
+        <p>最接近车控首页，可直接参考车况信息层级。</p>
+      </div>
+      <div class="rank">
+        <span>2</span>
+        <b>Web Bluetooth Terminal</b>
+        <p>BLE/PWA 经验最贴近当前技术栈，迁移成本最低。</p>
+      </div>
+      <div class="rank">
+        <span>3</span>
+        <b>Adafruit Dashboard</b>
+        <p>适合多车型能力发现和动态控制面板。</p>
+      </div>
+      <div class="rank">
+        <span>4</span>
+        <b>zuix HTML PWA</b>
+        <p>只借鉴触控壳、抽屉和 PWA 页面组织。</p>
+      </div>
+    </section>
+
+    <section class="grid">
+      <article class="candidate featured">
+        <div>
+          <div class="tagline">最像车控首页</div>
+          <h3>Vehicle Status Card</h3>
+          <p>Home Assistant 车辆状态卡片，包含电量、锁状态、胎压、车辆图片、小地图、实体分组。适合作为控车首页的信息架构参考。</p>
+          <div class="facts">
+            <span><b>技术栈：</b>TypeScript / Web Components / Home Assistant Lovelace</span>
+            <span><b>借鉴点：</b>车况总览、状态 chips、车辆视觉、地图卡片、详情折叠</span>
+            <span><b>风险：</b>依赖 Home Assistant 实体体系，不能直接迁移业务链路</span>
+          </div>
+          <div class="links">
+            <a class="link primary" href="https://github.com/ngocjohn/vehicle-status-card" target="_blank" rel="noreferrer">GitHub</a>
+          </div>
+        </div>
+        <div>
+          <p>这个项目的截图在 README 中，建议优先打开 GitHub 查看车辆卡片效果。</p>
+        </div>
+      </article>
+
+      <article class="candidate">
+        <a href="../ref-web-bluetooth-terminal.png" target="_blank" rel="noreferrer">
+          <img src="../ref-web-bluetooth-terminal.png" alt="Web Bluetooth Terminal 预览" />
+        </a>
+        <div>
+          <div class="tagline">BLE/PWA 架构参考</div>
+          <h3>Web Bluetooth Terminal</h3>
+          <p>直接面向 Web Bluetooth 的 PWA，适合参考 BLE 连接、收发缓冲、离线安装和移动端终端模式。</p>
+          <div class="facts">
+            <span><b>迁移成本：</b>低，保留当前协议层，只吸收连接状态和 PWA 经验</span>
+            <span><b>不适配点：</b>UI 是终端，不是控车 App</span>
+          </div>
+          <div class="links">
+            <a class="link primary" href="https://loginov-rocks.github.io/Web-Bluetooth-Terminal/" target="_blank" rel="noreferrer">在线效果</a>
+            <a class="link" href="https://github.com/loginov-rocks/Web-Bluetooth-Terminal" target="_blank" rel="noreferrer">GitHub</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="candidate">
+        <a href="../ref-adafruit-webbluetooth-dashboard.png" target="_blank" rel="noreferrer">
+          <img src="../ref-adafruit-webbluetooth-dashboard.png" alt="Adafruit Web Bluetooth Dashboard 预览" />
+        </a>
+        <div>
+          <div class="tagline">动态控制面板参考</div>
+          <h3>Adafruit Web Bluetooth Dashboard</h3>
+          <p>连接设备后根据支持的 Bluetooth services 动态生成面板。适合多车型/多固件能力差异的控车 UI。</p>
+          <div class="facts">
+            <span><b>迁移成本：</b>中低，思路可用，服务模型不同</span>
+            <span><b>不适配点：</b>需要 BLE 设备才能看完整交互</span>
+          </div>
+          <div class="links">
+            <a class="link primary" href="https://adafruit.github.io/Adafruit_WebBluetooth_Dashboard/" target="_blank" rel="noreferrer">在线效果</a>
+            <a class="link" href="https://github.com/adafruit/Adafruit_WebBluetooth_Dashboard" target="_blank" rel="noreferrer">GitHub</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="candidate">
+        <a href="../ref-esp32-web-bluetooth.png" target="_blank" rel="noreferrer">
+          <img src="../ref-esp32-web-bluetooth.png" alt="ESP32 Web Bluetooth 预览" />
+        </a>
+        <div>
+          <div class="tagline">设备边界参考</div>
+          <h3>ESP32-Web-Bluetooth</h3>
+          <p>强调网页由正常 Web 基础设施托管，设备只负责 BLE 数据点和控制。适合当前“前端体验重、设备端轻”的车控模型。</p>
+          <div class="facts">
+            <span><b>迁移成本：</b>低，主要吸收边界设计</span>
+            <span><b>不适配点：</b>示例 UI 很基础，不适合作为最终视觉</span>
+          </div>
+          <div class="links">
+            <a class="link primary" href="https://wave1art.github.io/ESP32-Web-Bluetooth/" target="_blank" rel="noreferrer">在线效果</a>
+            <a class="link" href="https://github.com/Wave1art/ESP32-Web-Bluetooth" target="_blank" rel="noreferrer">GitHub</a>
+          </div>
+        </div>
+      </article>
+
+      <article class="candidate">
+        <a href="../ref-zuix-html-pwa.png" target="_blank" rel="noreferrer">
+          <img src="../ref-zuix-html-pwa.png" alt="zuix HTML PWA 预览" />
+        </a>
+        <div>
+          <div class="tagline">移动 PWA 壳参考</div>
+          <h3>zuix-html-pwa</h3>
+          <p>响应式、touch-first、抽屉布局、懒加载和 PWA 壳层参考价值高。建议只借鉴壳层，不引入整套框架。</p>
+          <div class="facts">
+            <span><b>迁移成本：</b>中，HTML/CSS 模式可摘取</span>
+            <span><b>不适配点：</b>不是车控业务，视觉需要重新定制</span>
+          </div>
+          <div class="links">
+            <a class="link primary" href="https://zuixjs.github.io/zuix-html-pwa/" target="_blank" rel="noreferrer">在线效果</a>
+            <a class="link" href="https://github.com/zuixjs/zuix-html-pwa" target="_blank" rel="noreferrer">GitHub</a>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="decision">
+      <h2>次级候选</h2>
+      <p>这些项目有参考价值，但不建议作为主视觉或主架构来源。原因主要是过重、偏后台、偏充电桩，或与当前原生 TS 控车项目迁移成本不匹配。</p>
+      <div class="secondary">
+        <div class="secondary-item">
+          <b>evcc</b>
+          <p>EV 充电和家庭能源管理很成熟，适合参考电量、充电、实时状态，但不覆盖锁车、灯光、坐垫等车身控制。</p>
+          <a class="link" href="https://github.com/evcc-io/evcc" target="_blank" rel="noreferrer">GitHub</a>
+        </div>
+        <div class="secondary-item">
+          <b>EV Charger Card</b>
+          <p>充电桩卡片交互清晰，适合参考主状态、快捷动作、折叠详情三层结构，但业务偏充电器。</p>
+          <a class="link" href="https://github.com/tmjo/charger-card" target="_blank" rel="noreferrer">GitHub</a>
+        </div>
+        <div class="secondary-item">
+          <b>Casanet</b>
+          <p>本地 IoT 设备控制、轻量 dashboard 和设备抽象值得借鉴，但视觉不够车控 App 化。</p>
+          <a class="link" href="https://github.com/casanet/casanet-server" target="_blank" rel="noreferrer">GitHub</a>
+        </div>
+        <div class="secondary-item">
+          <b>OpenRemote</b>
+          <p>资产模型、实时属性和规则引擎强，但平台级过重，更适合抽象数据模型，不适合直接套 UI。</p>
+          <a class="link" href="https://github.com/openremote/openremote" target="_blank" rel="noreferrer">GitHub</a>
+        </div>
+        <div class="secondary-item">
+          <b>vite-pwa / PWABuilder</b>
+          <p>适合补齐 manifest、service worker、离线缓存和安装体验，不是视觉参考。</p>
+          <a class="link" href="https://github.com/vite-pwa/create-pwa" target="_blank" rel="noreferrer">vite-pwa</a>
+        </div>
+        <div class="secondary-item">
+          <b>Adminator / Cleopatra</b>
+          <p>适合看 dashboard 组件分层、CSS token、轻 JS 页面组织，但后台气质较重，不能直接用于控车主界面。</p>
+          <a class="link" href="https://github.com/puikinsh/Adminator-admin-dashboard" target="_blank" rel="noreferrer">Adminator</a>
+        </div>
+      </div>
+    </section>
+
+    <section class="decision">
+      <h2>待确认方向</h2>
+      <p>确认后再输出完整执行方案。当前不建议直接套任何项目，而是组合参考：车控首页取 Vehicle Status Card，BLE/PWA 取 Web Bluetooth Terminal，动态能力取 Adafruit，轻量壳取 zuix。</p>
+      <div class="paths">
+        <div class="path"><b>A. 车控首页优先</b>先做产品化视觉、车况总览、核心控车按钮和状态反馈。</div>
+        <div class="path"><b>B. 性能架构优先</b>先做 PWA、离线缓存、连接状态机 UI、调试隔离和命令反馈。</div>
+        <div class="path"><b>C. 完整方案</b>一次规划视觉、结构、性能、PWA、BLE/云控边界和分阶段落地。</div>
+      </div>
+      <div class="chooser">
+        <b>选择建议：</b>如果你要先给人看效果，选 A；如果你担心低端机、弱网、离线和 BLE 稳定性，选 B；如果目标是后续直接进入开发排期，选 C。当前项目基础很轻，推荐 C，因为它不会要求立即执行代码改造，只会先把落地范围、风险和阶段拆清楚。
+      </div>
+    </section>
+  </main>
+</body>
+</html>
