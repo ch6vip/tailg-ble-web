@@ -114,6 +114,11 @@ function shouldRenderReadyFeedback() {
   return currentFeedbackState === 'Idle' || currentFeedbackState === 'Ready'
 }
 
+function resetFeedbackToAvailability() {
+  currentFeedbackState = 'Idle'
+  updateState()
+}
+
 function getControlStatus() {
   const cloudReady = !!cloudToken && !!selectedImei
   const bleReady = conn?.state === 'authenticated'
@@ -389,7 +394,7 @@ function armDangerousCommand(btn: HTMLButtonElement, cmd: CommandCode, run: () =
     btn.classList.remove('is-holding')
     const text = btn.querySelector('.text')
     if (text) text.textContent = originalText
-    if (currentFeedbackState === 'Hold') updateState()
+    if (currentFeedbackState === 'Hold') resetFeedbackToAvailability()
   }
 
   const start = (event: PointerEvent) => {
