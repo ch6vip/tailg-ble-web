@@ -20,6 +20,7 @@ export class TailgBleConnection {
   private _token: string = ''
   private _keyHex: string
   private _serviceType: 'fee5' | 'fcc0' | 'unknown' = 'unknown'
+  private _chars: Map<string, BluetoothRemoteGATTCharacteristic> = new Map()
 
   onStateChange: ((state: ConnectionState) => void) | null = null
   onResponse: ((resp: ParsedResponse) => void) | null = null
@@ -183,7 +184,6 @@ export class TailgBleConnection {
         ].filter(Boolean).join(', ')
         this.log(`  [Char] ${c.uuid}  [${flags}]`)
 
-        // 订阅所有可通知/可指示的特征
         if (p.notify || p.indicate) {
           try {
             await c.startNotifications()
@@ -199,11 +199,35 @@ export class TailgBleConnection {
             this.log(`    → 订阅失败`)
           }
         }
+
+        // 保存特征引用供手动发送
+        const shortId = c.uuid.substring(4, 8)
+        this._chars.set(shortId, c)
       }
     }
 
     this.setState('connected')
     this.log('\n=== 诊断完成，监听中... ===')
+    this.log('可用 writeRaw("fe02", "A700000A100100000000...") 发送数据')
+  }
+
+  async writeRaw(charShortId: string, hexData: string): Promise<void> {
+    const c = this._chars.get(charShortId)
+    if (!c) {
+      this.log(`错误: 特征 ${charShortId} 不存在，可用: ${[...this._chars.keys()].join(', ')}`)
+      return
+    }
+    const data = new Uint8Array(hexData.match(/.{2}/g)!.map(b => parseInt(b, 16)))
+    this.log(`→ [${charShortId}] ${bytesToHex(data)}`)
+    try {
+      if (c.properties.writeWithoutResponse) {
+        await c.writeValueWithoutResponse(data as unknown as BufferSource)
+      } else {
+        await c.writeValue(data as unknown as BufferSource)
+      }
+    } catch (e: any) {
+      this.log(`写入失败: ${e.message}`)
+    }
   }
 
   private async bindCharacteristics(service: BluetoothRemoteGATTService) {

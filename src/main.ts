@@ -1,5 +1,6 @@
 import { TailgBleConnection } from './ble/connection'
 import { buildCommand } from './ble/protocol'
+import { buildQgjLoginFrame } from './ble/qgj-protocol'
 import { bytesToHex } from './utils/hex'
 import { AES_KEYS, type CommandCode, type ModelType, type ParsedResponse } from './types'
 
@@ -140,6 +141,19 @@ function init() {
 
   $('btn-clear-log').addEventListener('click', () => {
     ;($('log') as HTMLTextAreaElement).value = ''
+  })
+
+  $('btn-send-raw').addEventListener('click', async () => {
+    const charId = ($('char-select') as HTMLSelectElement).value
+    const hex = ($('hex-input') as HTMLInputElement).value.replace(/\s/g, '')
+    if (!hex) return
+    await conn.writeRaw(charId, hex)
+  })
+
+  $('btn-qgj-login').addEventListener('click', async () => {
+    const loginFrame = buildQgjLoginFrame('000000000', 0)
+    log(`尝试 QGJ 登录 (pwd=0, uid=0): ${bytesToHex(loginFrame)}`)
+    await conn.writeRaw('fe02', bytesToHex(loginFrame))
   })
 
   updateState()
