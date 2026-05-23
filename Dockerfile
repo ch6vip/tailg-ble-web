@@ -5,7 +5,7 @@ RUN npm ci
 COPY . .
 RUN npm run build
 
-FROM nginx:alpine
-COPY --from=build /app/dist /usr/share/nginx/html
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+FROM busybox:1.36
+COPY --from=build /app/dist /var/www
 EXPOSE 80
+CMD ["busybox", "httpd", "-f", "-p", "80", "-h", "/var/www"]
