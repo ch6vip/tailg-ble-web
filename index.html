@@ -31,13 +31,37 @@
     .status-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
     .status-item { background: #0f3460; border-radius: 8px; padding: 10px; text-align: center; }
     .status-item .val { font-size: 1.2em; font-weight: bold; margin-top: 4px; }
+    .car-item { background: #0f3460; border: 1px solid #333; border-radius: 8px; padding: 10px 12px; margin-top: 8px; cursor: pointer; transition: all 0.2s; }
+    .car-item:hover { border-color: #00d4ff55; }
+    .car-item.selected { border-color: #00d4ff; background: #00d4ff11; }
+    .car-item .car-name { font-weight: bold; }
+    .car-item .car-info { font-size: 0.8em; color: #888; margin-top: 4px; }
+    input::placeholder { color: #666; }
   </style>
 </head>
 <body>
-  <h1>台铃 BLE 控车</h1>
+  <h1>台铃智控</h1>
 
   <div class="section">
-    <h2>连接</h2>
+    <h2>云端控车</h2>
+    <div class="row">
+      <input id="phone-input" type="tel" placeholder="手机号" style="flex:1;background:#0f3460;color:#eee;border:1px solid #333;border-radius:6px;padding:8px 10px;font-size:0.9em" />
+      <button id="btn-get-code">验证码</button>
+    </div>
+    <div class="row">
+      <input id="sms-input" type="text" placeholder="验证码" style="flex:1;background:#0f3460;color:#eee;border:1px solid #333;border-radius:6px;padding:8px 10px;font-size:0.9em" />
+      <button id="btn-cloud-login">登录</button>
+      <button id="btn-cloud-logout" style="display:none">退出</button>
+    </div>
+    <div class="row">
+      <label>状态</label>
+      <span id="cloud-state" style="color:#888">未登录</span>
+    </div>
+    <div id="car-list"></div>
+  </div>
+
+  <div class="section">
+    <h2>蓝牙直连</h2>
     <div class="row">
       <label>型号</label>
       <select id="model-select">
