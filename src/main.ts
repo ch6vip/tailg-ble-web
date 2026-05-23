@@ -309,7 +309,7 @@ function init() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: '' }),
     }).catch(() => {})
-    $('cloud-state').textContent = '未登录'
+    $('cloud-state').textContent = '离线模式'
     $('cloud-dot').classList.remove('online')
     $('btn-cloud-login').style.display = ''
     $('btn-cloud-logout').style.display = 'none'
@@ -361,7 +361,7 @@ function init() {
     const panel = $('advanced-panel')
     const isHidden = panel.style.display === 'none' || !panel.style.display
     panel.style.display = isHidden ? 'block' : 'none'
-    $('advanced-toggle').innerHTML = isHidden ? '&#x25B2; 高级' : '&#x25BC; 高级'
+    $('advanced-toggle').textContent = isHidden ? '参数调试面板 ⏶' : '参数调试面板 ⏷'
   })
 
   updateState()
