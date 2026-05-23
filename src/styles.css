@@ -20,14 +20,19 @@
   -webkit-tap-highlight-color: transparent;
 }
 
+html {
+  background: #07100e;
+}
+
 body {
   min-height: 100vh;
+  min-height: 100dvh;
   color: var(--ink);
   font-family: Aptos, "Segoe UI", sans-serif;
   background:
     radial-gradient(circle at 50% -10%, rgba(24, 183, 164, 0.35), transparent 19rem),
     radial-gradient(circle at 90% 8%, rgba(231, 144, 34, 0.22), transparent 16rem),
-    linear-gradient(180deg, #07100e 0%, #12211d 46%, #ece3d1 46%, #f7f0df 100%);
+    linear-gradient(180deg, #07100e 0%, #12211d 42%, #4f5749 54%, #ece3d1 64%, #f7f0df 100%);
 }
 
 button,
@@ -44,9 +49,11 @@ button {
 .app {
   width: min(100%, 430px);
   min-height: 100vh;
+  min-height: 100dvh;
   margin: 0 auto;
-  padding: 18px 14px 92px;
-  overflow: hidden;
+  padding: 18px 14px 104px;
+  overflow-x: hidden;
+  overflow-y: visible;
 }
 
 .topbar {
@@ -755,18 +762,18 @@ textarea#log {
 .floating {
   position: fixed;
   left: 50%;
-  bottom: 12px;
+  bottom: 10px;
   width: min(calc(100% - 28px), 402px);
   transform: translateX(-50%);
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
-  padding: 10px 10px 10px 16px;
+  padding: 8px 8px 8px 14px;
   border: 1px solid rgba(16, 26, 23, 0.12);
   border-radius: 999px;
-  background: rgba(247, 240, 223, 0.9);
-  box-shadow: 0 20px 48px rgba(27, 37, 31, 0.2);
+  background: rgba(247, 240, 223, 0.94);
+  box-shadow: 0 14px 34px rgba(27, 37, 31, 0.16);
   backdrop-filter: blur(16px);
 }
 
@@ -785,14 +792,14 @@ textarea#log {
 }
 
 .floating span {
-  color: var(--muted);
+  color: #2f3f39;
   font-size: 0.82rem;
 }
 
 .floating button {
   border: 0;
   border-radius: 999px;
-  padding: 11px 14px;
+  padding: 9px 13px;
   color: #f9f3e4;
   background: var(--ink);
   font-weight: 800;
@@ -881,9 +888,9 @@ textarea#log {
   font-size: 0.86rem;
 }
 
-@media (max-width: 370px) {
+@media (max-width: 520px) {
   .app {
-    padding: 14px 10px 88px;
+    padding: 12px 10px 96px;
   }
 
   .topbar {
@@ -892,7 +899,7 @@ textarea#log {
 
   .hero-card {
     min-height: auto;
-    padding: 16px;
+    padding: 14px;
     border-radius: 26px;
   }
 
@@ -911,36 +918,36 @@ textarea#log {
   }
 
   .hero-head h1 {
-    font-size: 1.88rem;
+    font-size: 1.72rem;
   }
 
   .bike-visual {
-    height: 58px;
-    margin: 0 0 12px;
+    height: 46px;
+    margin: -2px 0 9px;
   }
 
   .bike-body {
-    bottom: 14px;
-    height: 25px;
+    bottom: 12px;
+    height: 21px;
   }
 
   .bike-body::before {
-    left: 42px;
-    top: -21px;
-    width: 70px;
-    height: 32px;
-    border-width: 7px;
-  }
-
-  .wheel {
-    width: 34px;
-    height: 34px;
+    left: 40px;
+    top: -17px;
+    width: 62px;
+    height: 26px;
     border-width: 6px;
   }
 
+  .wheel {
+    width: 30px;
+    height: 30px;
+    border-width: 5px;
+  }
+
   .status-chip {
-    min-height: 58px;
-    padding: 9px;
+    min-height: 52px;
+    padding: 8px;
     border-radius: 16px;
   }
 
@@ -949,18 +956,67 @@ textarea#log {
   }
 
   .dash-box {
-    min-height: 96px;
-    padding: 14px;
+    min-height: 86px;
+    padding: 12px;
     border-radius: 22px;
+  }
+
+  .dash-box .val {
+    margin-top: 10px;
+    font-size: 1.78rem;
+  }
+
+  .metric-hint {
+    margin-top: 7px;
+    font-size: 0.72rem;
+  }
+
+  .sheet {
+    padding-top: 14px;
+  }
+
+  .dashboard {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .section-title {
+    margin-top: 12px;
   }
 
   .ctrl-btn {
-    min-height: 92px;
+    min-height: 86px;
     border-radius: 22px;
+    gap: 7px;
+  }
+
+  .ctrl-btn .icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 14px;
   }
 
   .ctrl-btn .text {
-    font-size: 0.82rem;
+    font-size: 0.78rem;
+  }
+
+  .floating {
+    position: sticky;
+    left: auto;
+    bottom: 10px;
+    width: 100%;
+    min-height: 48px;
+    margin-top: 14px;
+    padding: 7px 7px 7px 12px;
+    transform: none;
+  }
+
+  .floating span {
+    font-size: 0.76rem;
+  }
+
+  .floating button {
+    padding: 8px 11px;
   }
 }
 
