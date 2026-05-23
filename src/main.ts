@@ -8,6 +8,35 @@ import type { CarInfo, CloudCmd } from './cloud/types'
 
 const $ = (id: string) => document.getElementById(id)!
 
+const APP_PASSWORD = 'tailg2026'
+
+function initLock() {
+  const saved = sessionStorage.getItem('unlocked')
+  if (saved === '1') {
+    unlock()
+    return
+  }
+  $('lock-btn').addEventListener('click', tryUnlock)
+  $('lock-pwd').addEventListener('keydown', (e) => {
+    if ((e as KeyboardEvent).key === 'Enter') tryUnlock()
+  })
+}
+
+function tryUnlock() {
+  const pwd = ($('lock-pwd') as HTMLInputElement).value
+  if (pwd === APP_PASSWORD) {
+    sessionStorage.setItem('unlocked', '1')
+    unlock()
+  } else {
+    $('lock-error').style.display = 'block'
+  }
+}
+
+function unlock() {
+  $('lock-screen').style.display = 'none'
+  document.querySelector('.app')!.removeAttribute('style')
+}
+
 let conn: TailgBleConnection
 let cloudToken = ''
 let selectedImei = ''
@@ -131,6 +160,7 @@ function selectCar(car: CarInfo) {
 }
 
 function init() {
+  initLock()
   conn = new TailgBleConnection(getSelectedKey())
   conn.onStateChange = updateState
   conn.onResponse = handleResponse

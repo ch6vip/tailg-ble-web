@@ -97,10 +97,28 @@
     .state-authenticated { color: #3fb950; }
 
     select#model-select { background: #0d1117; color: #e6edf3; border: 1px solid #30363d; border-radius: 6px; padding: 6px 10px; font-size: 0.85em; }
+
+    .lock-screen { position: fixed; inset: 0; background: #0d1117; display: flex; align-items: center; justify-content: center; z-index: 999; }
+    .lock-box { text-align: center; width: 280px; }
+    .lock-box h2 { color: #58a6ff; margin-bottom: 20px; font-size: 1.3em; }
+    .lock-box input { width: 100%; background: #161b22; color: #e6edf3; border: 1px solid #30363d; border-radius: 8px; padding: 12px; font-size: 1em; text-align: center; outline: none; margin-bottom: 12px; }
+    .lock-box input:focus { border-color: #58a6ff; }
+    .lock-box button { width: 100%; background: #1f6feb; color: #fff; border: none; border-radius: 8px; padding: 12px; font-size: 0.95em; cursor: pointer; }
+    .lock-box button:hover { background: #388bfd; }
+    .lock-box .error { color: #f85149; font-size: 0.8em; margin-top: 8px; display: none; }
   </style>
 </head>
 <body>
-  <div class="app">
+  <div class="lock-screen" id="lock-screen">
+    <div class="lock-box">
+      <h2>台铃智控</h2>
+      <input id="lock-pwd" type="password" placeholder="输入访问密码" />
+      <button id="lock-btn">进入</button>
+      <div class="error" id="lock-error">密码错误</div>
+    </div>
+  </div>
+
+  <div class="app" style="display:none">
     <div class="header"><h1>台铃智控</h1></div>
 
     <div class="tabs">
