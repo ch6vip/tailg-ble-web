@@ -1,5 +1,9 @@
+interface Env {
+  APP_PASSWORD: string
+}
+
 export default {
-  async fetch(request: Request): Promise<Response> {
+  async fetch(request: Request, env: Env): Promise<Response> {
     if (request.method === 'OPTIONS') {
       return new Response(null, { status: 204, headers: corsHeaders() })
     }
@@ -8,27 +12,41 @@ export default {
       return json({ error: 'POST only' }, 405)
     }
 
-    const { url, method, headers, body } = await request.json<ProxyRequest>()
+    const url = new URL(request.url)
 
-    if (!url || !url.startsWith('https://www.tailgdd.com/')) {
-      return json({ error: 'invalid url' }, 400)
+    if (url.pathname === '/auth') {
+      const { password } = await request.json<{ password: string }>()
+      if (password === env.APP_PASSWORD) {
+        return json({ ok: true })
+      }
+      return json({ ok: false }, 401)
     }
 
-    const resp = await fetch(url, {
-      method: method || 'GET',
-      headers: headers || {},
-      body: method !== 'GET' ? body : undefined,
-    })
+    if (url.pathname === '/proxy') {
+      const { url: targetUrl, method, headers, body } = await request.json<ProxyRequest>()
 
-    const respHeaders: Record<string, string> = {}
-    resp.headers.forEach((v, k) => { respHeaders[k] = v })
+      if (!targetUrl || !targetUrl.startsWith('https://www.tailgdd.com/')) {
+        return json({ error: 'invalid url' }, 400)
+      }
 
-    const respBody = await resp.text()
+      const resp = await fetch(targetUrl, {
+        method: method || 'GET',
+        headers: headers || {},
+        body: method !== 'GET' ? body : undefined,
+      })
 
-    return new Response(
-      JSON.stringify({ status: resp.status, headers: respHeaders, body: respBody }),
-      { status: 200, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } }
-    )
+      const respHeaders: Record<string, string> = {}
+      resp.headers.forEach((v, k) => { respHeaders[k] = v })
+
+      const respBody = await resp.text()
+
+      return new Response(
+        JSON.stringify({ status: resp.status, headers: respHeaders, body: respBody }),
+        { status: 200, headers: { ...corsHeaders(), 'Content-Type': 'application/json' } }
+      )
+    }
+
+    return json({ error: 'not found' }, 404)
   },
 }
 

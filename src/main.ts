@@ -8,20 +8,11 @@ import type { CarInfo, CloudCmd } from './cloud/types'
 
 const $ = (id: string) => document.getElementById(id)!
 
-async function hashPwd(pwd: string): Promise<string> {
-  const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(pwd))
-  return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('')
-}
+const PROXY_BASE = 'https://tailg-proxy.ch6vip.workers.dev'
 
 function initLock() {
   const saved = sessionStorage.getItem('unlocked')
   if (saved === '1') { unlock(); return }
-
-  const hasPassword = !!localStorage.getItem('appPwdHash')
-  if (!hasPassword) {
-    ($('lock-pwd') as HTMLInputElement).placeholder = '设置访问密码'
-    $('lock-btn').textContent = '设置'
-  }
 
   $('lock-btn').addEventListener('click', tryUnlock)
   $('lock-pwd').addEventListener('keydown', (e) => {
@@ -32,17 +23,20 @@ function initLock() {
 async function tryUnlock() {
   const pwd = ($('lock-pwd') as HTMLInputElement).value
   if (!pwd) return
-  const hash = await hashPwd(pwd)
-  const stored = localStorage.getItem('appPwdHash')
-
-  if (!stored) {
-    localStorage.setItem('appPwdHash', hash)
-    sessionStorage.setItem('unlocked', '1')
-    unlock()
-  } else if (hash === stored) {
-    sessionStorage.setItem('unlocked', '1')
-    unlock()
-  } else {
+  try {
+    const resp = await fetch(`${PROXY_BASE}/auth`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password: pwd }),
+    })
+    const data = await resp.json()
+    if (data.ok) {
+      sessionStorage.setItem('unlocked', '1')
+      unlock()
+    } else {
+      $('lock-error').style.display = 'block'
+    }
+  } catch {
     $('lock-error').style.display = 'block'
   }
 }
