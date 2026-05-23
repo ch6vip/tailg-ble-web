@@ -21,6 +21,11 @@ async function proxyFetch(url: string, method: string, headers: Record<string, s
   return resp.json()
 }
 
+function isSuccess(data: any): boolean {
+  const code = String(data.code)
+  return code === '200' || code === '0' || (data.msg && data.msg.includes('成功'))
+}
+
 export async function getSmsCode(phone: string): Promise<void> {
   const res = await proxyFetch(
     `${API_V1}app/getCode?phone=${phone}`,
@@ -28,7 +33,7 @@ export async function getSmsCode(phone: string): Promise<void> {
     {},
   )
   const data = JSON.parse(res.body)
-  if (data.code !== '200' && data.code !== 200) {
+  if (!isSuccess(data)) {
     throw new Error(data.msg || `服务器返回: ${res.body}`)
   }
 }
@@ -57,7 +62,7 @@ export async function getCarStatus(token: string): Promise<CarInfo[]> {
     JSON.stringify({ phoneMode: 'web' })
   )
   const data = JSON.parse(res.body)
-  if (data.code !== '200' && data.code !== 200) {
+  if (!isSuccess(data)) {
     throw new Error(data.msg || '获取车辆信息失败')
   }
   const result = data.data
@@ -72,7 +77,7 @@ export async function sendCommand(token: string, imei: string, cmd: CloudCmd): P
     JSON.stringify({ imei })
   )
   const data = JSON.parse(res.body)
-  if (data.code !== '200' && data.code !== 200) {
+  if (!isSuccess(data)) {
     throw new Error(data.msg || `指令 ${cmd} 失败`)
   }
   return data.msg || 'success'
