@@ -110,6 +110,27 @@ function init() {
     })
   })
 
+  $('btn-copy-log').addEventListener('click', async () => {
+    const el = $('log') as HTMLTextAreaElement
+    const text = el.value
+    if (!text) return
+    const btn = $('btn-copy-log') as HTMLButtonElement
+    const original = btn.textContent
+    try {
+      await navigator.clipboard.writeText(text)
+      btn.textContent = '已复制'
+    } catch {
+      el.select()
+      document.execCommand('copy')
+      btn.textContent = '已复制'
+    }
+    setTimeout(() => { btn.textContent = original }, 1500)
+  })
+
+  $('btn-clear-log').addEventListener('click', () => {
+    ;($('log') as HTMLTextAreaElement).value = ''
+  })
+
   updateState()
 }
 
