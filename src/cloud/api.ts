@@ -87,3 +87,41 @@ export async function sendCommand(token: string, imei: string, cmd: CloudCmd): P
   }
   return data.msg || 'success'
 }
+
+export async function checkToken(token: string): Promise<boolean> {
+  try {
+    const res = await proxyFetch(
+      `${API_V1}app/centralControl/carStatus`,
+      'POST',
+      { 'Content-Type': 'application/json', Authorization: token },
+      JSON.stringify({ phoneMode: 'web' })
+    )
+    return res.status === 200 && !res.body.includes('"401"')
+  } catch {
+    return false
+  }
+}
+
+export interface SavedAccount {
+  phone: string
+  token: string
+  savedAt: number
+}
+
+export function getSavedAccounts(): SavedAccount[] {
+  try {
+    return JSON.parse(localStorage.getItem('accounts') || '[]')
+  } catch { return [] }
+}
+
+export function saveAccount(phone: string, token: string) {
+  const accounts = getSavedAccounts().filter(a => a.phone !== phone)
+  accounts.unshift({ phone, token, savedAt: Date.now() })
+  localStorage.setItem('accounts', JSON.stringify(accounts))
+  localStorage.setItem('cloudToken', token)
+}
+
+export function removeAccount(phone: string) {
+  const accounts = getSavedAccounts().filter(a => a.phone !== phone)
+  localStorage.setItem('accounts', JSON.stringify(accounts))
+}
