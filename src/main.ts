@@ -93,6 +93,17 @@ function init() {
     updateState()
   })
 
+  $('btn-diagnose').addEventListener('click', async () => {
+    try {
+      conn.keyHex = getSelectedKey()
+      await conn.scanAll()
+      await conn.diagnose()
+    } catch (e: any) {
+      log(`诊断失败: ${e.message}`)
+    }
+    updateState()
+  })
+
   $('btn-disconnect').addEventListener('click', () => {
     conn.disconnect()
     updateState()

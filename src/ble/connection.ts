@@ -147,6 +147,65 @@ export class TailgBleConnection {
     await this.sendTokenRequest()
   }
 
+  async diagnose(): Promise<void> {
+    if (!this.device?.gatt) throw new Error('No device')
+    this.setState('connecting')
+    this.log('=== 诊断模式: 枚举全部 GATT 结构 ===')
+
+    this.server = await this.device.gatt.connect()
+    let services: BluetoothRemoteGATTService[] = []
+    try {
+      services = await this.server.getPrimaryServices()
+    } catch (e: any) {
+      this.log(`枚举服务失败: ${e.message}`)
+      this.setState('disconnected')
+      return
+    }
+
+    this.log(`共发现 ${services.length} 个服务:`)
+    for (const svc of services) {
+      this.log(`\n[Service] ${svc.uuid}`)
+      let chars: BluetoothRemoteGATTCharacteristic[] = []
+      try {
+        chars = await svc.getCharacteristics()
+      } catch {
+        this.log('  (无法枚举特征)')
+        continue
+      }
+      for (const c of chars) {
+        const p = c.properties
+        const flags = [
+          p.read && 'Read',
+          p.write && 'Write',
+          p.writeWithoutResponse && 'WriteNoResp',
+          p.notify && 'Notify',
+          p.indicate && 'Indicate',
+        ].filter(Boolean).join(', ')
+        this.log(`  [Char] ${c.uuid}  [${flags}]`)
+
+        // 订阅所有可通知/可指示的特征
+        if (p.notify || p.indicate) {
+          try {
+            await c.startNotifications()
+            const charUuid = c.uuid
+            c.addEventListener('characteristicvaluechanged', (ev) => {
+              const val = (ev.target as BluetoothRemoteGATTCharacteristic).value
+              if (!val) return
+              const raw = new Uint8Array(val.buffer)
+              this.log(`← [${charUuid.substring(4, 8)}] ${bytesToHex(raw)}`)
+            })
+            this.log(`    → 已订阅通知`)
+          } catch {
+            this.log(`    → 订阅失败`)
+          }
+        }
+      }
+    }
+
+    this.setState('connected')
+    this.log('\n=== 诊断完成，监听中... ===')
+  }
+
   private async bindCharacteristics(service: BluetoothRemoteGATTService) {
     if (this._serviceType === 'fee5') {
       this.writeChar = await service.getCharacteristic(BLE_WRITE_UUID)
