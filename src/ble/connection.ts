@@ -209,6 +209,13 @@ export class TailgBleConnection {
     this.setState('connected')
     this.log('\n=== 诊断完成，监听中... ===')
     this.log('可用 writeRaw("fe02", "A700000A100100000000...") 发送数据')
+
+    // 自动尝试 QGJ 登录 (写 feb1，听 feb2)
+    if (this._chars.has('feb1')) {
+      this.log('\n--- 自动尝试 QGJ 登录 → feb1 ---')
+      const loginHex = 'A700000A10010000000000000000'
+      await this.writeRaw('feb1', loginHex)
+    }
   }
 
   async writeRaw(charShortId: string, hexData: string): Promise<void> {
