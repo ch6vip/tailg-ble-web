@@ -41,7 +41,15 @@ export class TailgBleConnection {
     this.setState('connecting')
     try {
       this.device = await navigator.bluetooth.requestDevice({
-        filters: [{ services: [BLE_SERVICE_UUID] }],
+        filters: [
+          { services: [BLE_SERVICE_UUID] },
+          { namePrefix: 'TL_' },
+          { namePrefix: 'TAILG_' },
+          { namePrefix: 'Hi-TAILING' },
+          { namePrefix: 'Q_BASH' },
+          { namePrefix: 'QBIKE_' },
+          { namePrefix: 'QDemo_' },
+        ],
         optionalServices: [BLE_SERVICE_UUID],
       })
       this.device.addEventListener('gattserverdisconnected', () => {
@@ -53,6 +61,28 @@ export class TailgBleConnection {
       this.setState('disconnected')
       throw e
     }
+  }
+
+  async scanAll(): Promise<void> {
+    this.setState('connecting')
+    try {
+      this.device = await navigator.bluetooth.requestDevice({
+        acceptAllDevices: true,
+        optionalServices: [BLE_SERVICE_UUID],
+      })
+      this.device.addEventListener('gattserverdisconnected', () => {
+        this.setState('disconnected')
+        this.log('设备断开连接')
+      })
+      this.log(`选择设备: ${this.device.name ?? this.device.id}`)
+    } catch (e) {
+      this.setState('disconnected')
+      throw e
+    }
+  }
+
+  async connectToSelected(): Promise<void> {
+    await this.connect()
   }
 
   async connect(): Promise<void> {

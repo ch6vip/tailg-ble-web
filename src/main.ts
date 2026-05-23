@@ -82,6 +82,17 @@ function init() {
     updateState()
   })
 
+  $('btn-scan-all').addEventListener('click', async () => {
+    try {
+      conn.keyHex = getSelectedKey()
+      await conn.scanAll()
+      await conn.connectToSelected()
+    } catch (e: any) {
+      log(`连接失败: ${e.message}`)
+    }
+    updateState()
+  })
+
   $('btn-disconnect').addEventListener('click', () => {
     conn.disconnect()
     updateState()
