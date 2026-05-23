@@ -282,6 +282,11 @@ function init() {
       log('正在登录...')
       cloudToken = await login(phone, sms)
       localStorage.setItem('cloudToken', cloudToken)
+      fetch('/api/token', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: cloudToken }),
+      }).catch(() => {})
       log('登录成功')
       $('cloud-state').textContent = '已登录'
       $('cloud-dot').classList.add('online')
@@ -299,6 +304,11 @@ function init() {
     selectedImei = ''
     cloudMode = false
     localStorage.removeItem('cloudToken')
+    fetch('/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: '' }),
+    }).catch(() => {})
     $('cloud-state').textContent = '未登录'
     $('cloud-dot').classList.remove('online')
     $('btn-cloud-login').style.display = ''
@@ -331,6 +341,19 @@ function init() {
     $('btn-cloud-login').style.display = 'none'
     $('btn-cloud-logout').style.display = ''
     loadCars()
+  } else {
+    fetch('/api/token').then(r => r.json()).then(d => {
+      if (d.token) {
+        cloudToken = d.token
+        localStorage.setItem('cloudToken', d.token)
+        cloudMode = true
+        $('cloud-state').textContent = '已登录'
+        $('cloud-dot').classList.add('online')
+        $('btn-cloud-login').style.display = 'none'
+        $('btn-cloud-logout').style.display = ''
+        loadCars()
+      }
+    }).catch(() => {})
   }
 
   // --- Advanced panel ---

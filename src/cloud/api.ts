@@ -22,6 +22,11 @@ async function proxyFetch(url: string, method: string, headers: Record<string, s
   const newToken = res.headers['authorization'] || res.headers['Authorization']
   if (newToken) {
     localStorage.setItem('cloudToken', newToken)
+    fetch('/api/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: newToken }),
+    }).catch(() => {})
   }
   return res
 }
@@ -119,6 +124,11 @@ export function saveAccount(phone: string, token: string) {
   accounts.unshift({ phone, token, savedAt: Date.now() })
   localStorage.setItem('accounts', JSON.stringify(accounts))
   localStorage.setItem('cloudToken', token)
+  fetch('/api/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token }),
+  }).catch(() => {})
 }
 
 export function removeAccount(phone: string) {
