@@ -1,3 +1,13 @@
 # 台铃智控
 
-台铃智控是一个移动端车辆控制台，用于云端智联、蓝牙直连、车辆状态查看和常用控车。
+> 移动端台铃车辆控制台，用于云端智联、蓝牙直连、车辆状态查看和常用控车。
+
+## Documentation
+
+- [移动端控车 UI 实施计划](/docs/mobile-control-ui-implementation-plan.md): 界面重构、交互保护和 PWA 接入的实施记录。
+- [协议说明](/docs/protocol.md): 蓝牙协议、命令和状态帧说明。
+- [QGJ 协议说明](/docs/qgj-protocol.md): QGJ 授权和协议帧说明。
+
+## App
+
+- [台铃智控](/): Web 控车入口。

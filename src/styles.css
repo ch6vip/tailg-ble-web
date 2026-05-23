@@ -263,11 +263,22 @@ button {
 
 .dash-box .val {
   display: block;
-  margin-top: 18px;
+  margin-top: 14px;
   font-size: 2.05rem;
   line-height: 1;
   font-weight: 800;
   letter-spacing: -0.07em;
+}
+
+.metric-hint {
+  display: block;
+  margin-top: 10px;
+  color: #4c5b55;
+  font-size: 0.76rem;
+}
+
+.dash-box.accent .metric-hint {
+  color: rgba(249, 243, 228, 0.72);
 }
 
 .dash-box.accent {
@@ -326,6 +337,8 @@ button {
 }
 
 .ctrl-btn {
+  position: relative;
+  overflow: hidden;
   min-height: 104px;
   border: 0;
   border-radius: 26px;
@@ -357,6 +370,19 @@ button {
 .ctrl-btn.is-holding {
   transform: translateY(2px) scale(0.98);
   box-shadow: inset 0 0 0 3px rgba(223, 74, 92, 0.32), 0 12px 32px rgba(223, 74, 92, 0.18);
+}
+
+.ctrl-btn.is-holding::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: auto;
+  bottom: 0;
+  width: 100%;
+  height: 5px;
+  background: linear-gradient(90deg, var(--red), var(--amber));
+  transform-origin: left;
+  animation: hold-progress 1s linear both;
 }
 
 .ctrl-btn .icon {
@@ -407,11 +433,33 @@ button {
   height: 42px;
   position: relative;
   border-radius: 50%;
-  background: conic-gradient(var(--cyan) 18%, rgba(255, 255, 255, 0.14) 0);
+  background: conic-gradient(rgba(255, 255, 255, 0.28) 100%, rgba(255, 255, 255, 0.14) 0);
 }
 
-.ctrl-btn.is-busy .icon,
-.feedback .progress {
+.feedback[data-state="Ready"] .progress {
+  background: conic-gradient(var(--green) 100%, rgba(255, 255, 255, 0.14) 0);
+}
+
+.feedback[data-state="TX"] .progress,
+.feedback[data-state="Hold"] .progress {
+  background: conic-gradient(var(--cyan) 28%, rgba(255, 255, 255, 0.14) 0);
+}
+
+.feedback[data-state="Timeout"] .progress,
+.feedback[data-state="Fail"] .progress {
+  background: conic-gradient(var(--red) 100%, rgba(255, 255, 255, 0.14) 0);
+}
+
+.feedback[data-state="OK"] .progress {
+  background: conic-gradient(var(--green) 100%, rgba(255, 255, 255, 0.14) 0);
+}
+
+.ctrl-btn.is-busy .icon {
+  animation: spin-pulse 1.2s linear infinite;
+}
+
+.feedback[data-state="TX"] .progress,
+.feedback[data-state="Hold"] .progress {
   animation: spin-pulse 1.2s linear infinite;
 }
 
@@ -449,11 +497,21 @@ button {
 }
 
 .connection-drawer {
-  display: none;
+  display: grid;
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transform: translateY(-6px);
+  transition: grid-template-rows 220ms ease, opacity 220ms ease, transform 220ms ease;
 }
 
 .connection-drawer.open {
-  display: block;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.connection-drawer > * {
+  overflow: hidden;
 }
 
 .connect-panel {
@@ -469,6 +527,27 @@ button {
   display: flex;
   gap: 10px;
   margin-bottom: 10px;
+}
+
+.cloud-login-form {
+  display: grid;
+  gap: 0;
+}
+
+.cloud-session {
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.44);
+}
+
+.cloud-session span {
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
 }
 
 .form-input,
@@ -549,6 +628,16 @@ select#model-select:focus {
   line-height: 1.45;
 }
 
+.empty-note {
+  padding: 12px;
+  border: 1px dashed rgba(16, 26, 23, 0.18);
+  border-radius: 18px;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.32);
+  font-size: 0.86rem;
+  line-height: 1.5;
+}
+
 .ble-row {
   display: flex;
   align-items: center;
@@ -593,6 +682,17 @@ select#model-select:focus {
   color: #f9f3e4;
   background: #101a17;
   font-weight: 900;
+}
+
+.drawer-debug-link {
+  width: 100%;
+  margin-top: 10px;
+  border: 1px dashed var(--line);
+  border-radius: 999px;
+  padding: 12px;
+  color: var(--muted);
+  background: transparent;
+  font-weight: 800;
 }
 
 .advanced-panel {
@@ -659,7 +759,7 @@ textarea#log {
   width: min(calc(100% - 28px), 402px);
   transform: translateX(-50%);
   display: grid;
-  grid-template-columns: 1fr auto;
+  grid-template-columns: auto 1fr auto;
   gap: 10px;
   align-items: center;
   padding: 10px 10px 10px 16px;
@@ -668,6 +768,20 @@ textarea#log {
   background: rgba(247, 240, 223, 0.9);
   box-shadow: 0 20px 48px rgba(27, 37, 31, 0.2);
   backdrop-filter: blur(16px);
+}
+
+.floating::before {
+  content: "";
+  width: 9px;
+  height: 9px;
+  border-radius: 999px;
+  background: var(--amber);
+  box-shadow: 0 0 0 5px rgba(231, 144, 34, 0.14);
+}
+
+.floating.is-online::before {
+  background: var(--green);
+  box-shadow: 0 0 0 5px rgba(20, 165, 111, 0.16);
 }
 
 .floating span {
@@ -768,6 +882,24 @@ textarea#log {
 }
 
 @media (max-width: 370px) {
+  .app {
+    padding: 14px 10px 88px;
+  }
+
+  .topbar {
+    margin-bottom: 12px;
+  }
+
+  .hero-card {
+    min-height: auto;
+    padding: 16px;
+    border-radius: 26px;
+  }
+
+  .hero-head {
+    margin-bottom: 10px;
+  }
+
   .form-row,
   .raw-row {
     flex-wrap: wrap;
@@ -781,6 +913,55 @@ textarea#log {
   .hero-head h1 {
     font-size: 1.88rem;
   }
+
+  .bike-visual {
+    height: 58px;
+    margin: 0 0 12px;
+  }
+
+  .bike-body {
+    bottom: 14px;
+    height: 25px;
+  }
+
+  .bike-body::before {
+    left: 42px;
+    top: -21px;
+    width: 70px;
+    height: 32px;
+    border-width: 7px;
+  }
+
+  .wheel {
+    width: 34px;
+    height: 34px;
+    border-width: 6px;
+  }
+
+  .status-chip {
+    min-height: 58px;
+    padding: 9px;
+    border-radius: 16px;
+  }
+
+  .status-chip strong {
+    font-size: 0.88rem;
+  }
+
+  .dash-box {
+    min-height: 96px;
+    padding: 14px;
+    border-radius: 22px;
+  }
+
+  .ctrl-btn {
+    min-height: 92px;
+    border-radius: 22px;
+  }
+
+  .ctrl-btn .text {
+    font-size: 0.82rem;
+  }
 }
 
 @media (prefers-reduced-motion: no-preference) {
@@ -788,20 +969,10 @@ textarea#log {
     animation: rise 520ms cubic-bezier(.2, .8, .2, 1) both;
   }
 
-  .dash-box,
-  .ctrl-btn,
   .feedback,
-  .connect-panel,
-  .advanced-toggle {
+  .connect-panel {
     animation: fade-up 460ms cubic-bezier(.2, .8, .2, 1) both;
   }
-
-  .dash-box:nth-child(2) { animation-delay: 40ms; }
-  .ctrl-btn:nth-child(2) { animation-delay: 40ms; }
-  .ctrl-btn:nth-child(3) { animation-delay: 80ms; }
-  .ctrl-btn:nth-child(4) { animation-delay: 120ms; }
-  .ctrl-btn:nth-child(5) { animation-delay: 160ms; }
-  .ctrl-btn:nth-child(6) { animation-delay: 200ms; }
 
   @keyframes rise {
     from { opacity: 0; transform: translateY(18px) scale(0.98); }
@@ -817,4 +988,9 @@ textarea#log {
     from { filter: saturate(1); transform: rotate(0deg); }
     to { filter: saturate(1.35); transform: rotate(360deg); }
   }
+}
+
+@keyframes hold-progress {
+  from { transform: scaleX(0); }
+  to { transform: scaleX(1); }
 }

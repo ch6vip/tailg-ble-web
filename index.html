@@ -33,7 +33,7 @@
       </div>
       <div class="connect-pill">
         <span class="dot" id="cloud-dot"></span>
-        <span id="cloud-state">离线模式</span>
+        <span id="cloud-state">云端未登录</span>
       </div>
     </header>
 
@@ -76,10 +76,12 @@
         <div class="dash-box metric accent">
           <div class="label">电池余量</div>
           <div class="val" id="battery-val">--</div>
+          <small class="metric-hint">登录或连接后更新</small>
         </div>
         <div class="dash-box metric">
           <div class="label">实时电压</div>
           <div class="val" id="voltage-val">--</div>
+          <small class="metric-hint">等待车辆回传</small>
         </div>
         <div class="dash-box dash-wide sr-state">
           <div class="label">安防状态</div>
@@ -93,7 +95,7 @@
 
       <div class="section-title">
         <div>
-          <small>Primary actions</small>
+          <small>常用操作</small>
           <h2>常用控车</h2>
         </div>
         <small>危险动作谨慎操作</small>
@@ -102,27 +104,27 @@
       <section class="control-card card" aria-label="控车命令">
         <div class="ctrl-grid">
           <button class="ctrl-btn green cmd-btn" data-cmd="02" disabled type="button">
-            <span class="icon">开</span><span class="text">解防</span>
+            <span class="icon">开</span><span class="text">解防解锁</span>
           </button>
           <button class="ctrl-btn green cmd-btn" data-cmd="06" disabled type="button">
-            <span class="icon">电</span><span class="text">上电</span>
+            <span class="icon">电</span><span class="text">一键上电</span>
           </button>
           <button class="ctrl-btn yellow cmd-btn" data-cmd="08" disabled type="button">
-            <span class="icon">鸣</span><span class="text">寻车</span>
+            <span class="icon">鸣</span><span class="text">寻车鸣笛</span>
           </button>
           <button class="ctrl-btn red cmd-btn" data-cmd="01" disabled type="button">
-            <span class="icon">锁</span><span class="text">设防</span>
+            <span class="icon">锁</span><span class="text">安全设防</span>
           </button>
           <button class="ctrl-btn red cmd-btn" data-cmd="07" disabled type="button">
-            <span class="icon">停</span><span class="text">断电</span>
+            <span class="icon">停</span><span class="text">切断电门</span>
           </button>
           <button class="ctrl-btn blue cmd-btn" data-cmd="05" disabled type="button">
-            <span class="icon">座</span><span class="text">坐垫</span>
+            <span class="icon">座</span><span class="text">打开坐垫</span>
           </button>
         </div>
       </section>
 
-      <div class="feedback" aria-live="polite">
+      <div class="feedback" data-state="Idle" aria-live="polite">
         <div class="progress"></div>
         <div>
           <strong id="command-feedback-title">等待控车指令</strong>
@@ -138,19 +140,24 @@
           <div class="card panel-card">
             <div class="panel-title">
               <div>
-                <small>Cloud link</small>
+                <small>云端连接</small>
                 <h2>云端智联</h2>
               </div>
               <span>验证码登录</span>
             </div>
-            <div class="form-row">
-              <input id="phone-input" class="form-input" type="tel" placeholder="手机号码" />
-              <button id="btn-get-code" class="btn" type="button">获取验证码</button>
+            <div class="cloud-login-form" id="cloud-login-form">
+              <div class="form-row">
+                <input id="phone-input" class="form-input" type="tel" placeholder="手机号码" />
+                <button id="btn-get-code" class="btn" type="button">获取验证码</button>
+              </div>
+              <div class="form-row">
+                <input id="sms-input" class="form-input" type="text" placeholder="短信验证码" />
+                <button id="btn-cloud-login" class="btn btn-primary" type="button">验证登录</button>
+              </div>
             </div>
-            <div class="form-row">
-              <input id="sms-input" class="form-input" type="text" placeholder="短信验证码" />
-              <button id="btn-cloud-login" class="btn btn-primary" type="button">验证登录</button>
-              <button id="btn-cloud-logout" class="btn" style="display:none" type="button">断开连接</button>
+            <div class="cloud-session" id="cloud-session" style="display:none">
+              <span>云端登录已恢复，选择车辆后即可控车。</span>
+              <button id="btn-cloud-logout" class="btn" type="button">断开连接</button>
             </div>
             <div id="car-list" class="car-list"></div>
           </div>
@@ -160,11 +167,12 @@
           <div class="card panel-card">
             <div class="panel-title">
               <div>
-                <small>Bluetooth link</small>
+                <small>蓝牙连接</small>
                 <h2>蓝牙直连</h2>
               </div>
               <span id="device-name">-</span>
             </div>
+            <div class="empty-note" id="ble-support-note"></div>
             <div class="ble-row">
               <label>车辆协议</label>
               <select id="model-select">
@@ -190,6 +198,7 @@
             </div>
           </div>
         </section>
+        <button class="drawer-debug-link" id="drawer-debug-link" type="button">打开工程调试</button>
       </div>
 
       <button class="advanced-toggle" id="advanced-toggle" type="button">工程调试面板 展开</button>
@@ -198,7 +207,7 @@
         <div class="card">
           <div class="panel-title">
             <div>
-              <small>Engineering mode</small>
+              <small>工程模式</small>
               <h2>参数调试</h2>
             </div>
             <span>默认收起</span>
@@ -228,10 +237,9 @@
       </section>
 
       <div class="floating">
-        <span>前端已按移动控车优先重排，协议链路保持不变。</span>
+        <span id="quick-status">连接车辆后即可控车</span>
         <div class="floating-actions">
           <button type="button" id="quick-connect">连接</button>
-          <button type="button" id="quick-debug">调试</button>
         </div>
       </div>
     </section>

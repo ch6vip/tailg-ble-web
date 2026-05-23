@@ -55,10 +55,11 @@ function unlock() {
 let conn: TailgBleConnection
 let cloudToken = ''
 let selectedImei = ''
-let cloudMode = false
+let cloudMode = true
 let commandBusy = false
 let activeCommandName = ''
 let commandTimeout: number | undefined
+let currentFeedbackState = 'Idle'
 
 const CMD_NAMES: Record<string, string> = {
   '01': '设防',
@@ -86,12 +87,99 @@ function log(msg: string) {
 }
 
 function setFeedback(title: string, text: string, mark = 'Live') {
+  currentFeedbackState = mark
+  const box = document.querySelector<HTMLElement>('.feedback')
   const titleEl = document.getElementById('command-feedback-title')
   const textEl = document.getElementById('command-feedback-text')
   const markEl = document.getElementById('command-feedback-mark')
+  if (box) box.dataset.state = mark
   if (titleEl) titleEl.textContent = title
   if (textEl) textEl.textContent = text
   if (markEl) markEl.textContent = mark
+}
+
+function getControlStatus() {
+  const cloudReady = !!cloudToken && !!selectedImei
+  const bleReady = conn?.state === 'authenticated'
+  const channel = cloudMode ? 'cloud' : 'ble'
+
+  if (cloudReady && bleReady) {
+    return {
+      label: '双通道可用',
+      detail: channel === 'cloud' ? '当前使用云端控车' : '当前使用蓝牙直连',
+      online: true,
+    }
+  }
+  if (cloudReady) {
+    return {
+      label: '云端已登录',
+      detail: '当前使用云端控车',
+      online: true,
+    }
+  }
+  if (bleReady) {
+    return {
+      label: '蓝牙已认证',
+      detail: '当前使用蓝牙直连',
+      online: true,
+    }
+  }
+  if (cloudToken && !selectedImei) {
+    return {
+      label: '云端待选车',
+      detail: '请选择车辆后控车',
+      online: false,
+    }
+  }
+  if (channel === 'ble') {
+    return {
+      label: conn?.state === 'connecting' ? '蓝牙连接中' : '蓝牙未连接',
+      detail: '连接车辆后即可控车',
+      online: false,
+    }
+  }
+  return {
+    label: '云端未登录',
+    detail: '登录或切换蓝牙后控车',
+    online: false,
+  }
+}
+
+function updateControlStatus() {
+  const status = getControlStatus()
+  const cloudState = document.getElementById('cloud-state')
+  const cloudDot = document.getElementById('cloud-dot')
+  const quickStatus = document.getElementById('quick-status')
+  const floating = document.querySelector<HTMLElement>('.floating')
+  if (cloudState) cloudState.textContent = status.label
+  cloudDot?.classList.toggle('online', status.online)
+  floating?.classList.toggle('is-online', status.online)
+  if (quickStatus) quickStatus.textContent = status.detail
+}
+
+function updateCloudSessionView() {
+  const loginForm = document.getElementById('cloud-login-form')
+  const session = document.getElementById('cloud-session')
+  const isLoggedIn = !!cloudToken
+  if (loginForm) loginForm.style.display = isLoggedIn ? 'none' : ''
+  if (session) session.style.display = isLoggedIn ? 'flex' : 'none'
+}
+
+function updateSupportNotes() {
+  const note = document.getElementById('ble-support-note')
+  if (!note) return
+  if (!('bluetooth' in navigator)) {
+    note.textContent = '当前浏览器不支持 Web Bluetooth，请在安卓 Chrome/Edge 或 HTTPS 环境下使用蓝牙直连。'
+    note.style.display = 'block'
+    return
+  }
+  if (!window.isSecureContext) {
+    note.textContent = '蓝牙直连需要 HTTPS 或 localhost 环境。'
+    note.style.display = 'block'
+    return
+  }
+  note.textContent = ''
+  note.style.display = 'none'
 }
 
 function setCommandBusy(isBusy: boolean, name = '') {
@@ -152,7 +240,7 @@ function updateState() {
   tokenEl.textContent = conn.token || '-'
 
   const btns = document.querySelectorAll<HTMLButtonElement>('.cmd-btn')
-  const canControl = cloudMode ? !!selectedImei : conn.state === 'authenticated'
+  const canControl = cloudMode ? !!cloudToken && !!selectedImei : conn.state === 'authenticated'
   btns.forEach((btn) => {
     btn.disabled = !canControl || commandBusy
   })
@@ -162,6 +250,9 @@ function updateState() {
     setFeedback('控车已就绪', cloudMode ? '当前指令将通过云端发送。' : '当前指令将通过蓝牙直连发送。', 'Ready')
   }
   syncSummary()
+  updateControlStatus()
+  updateCloudSessionView()
+  updateSupportNotes()
 }
 
 function handleResponse(resp: ParsedResponse) {
@@ -229,18 +320,24 @@ async function sendCloudCmd(cmd: CommandCode) {
 function armDangerousCommand(btn: HTMLButtonElement, cmd: CommandCode, run: () => Promise<void>) {
   let timer: number | undefined
   let armed = false
+  const originalText = btn.querySelector('.text')?.textContent ?? ''
 
   const reset = () => {
     if (timer != null) window.clearTimeout(timer)
     timer = undefined
     armed = false
     btn.classList.remove('is-holding')
+    const text = btn.querySelector('.text')
+    if (text) text.textContent = originalText
+    if (currentFeedbackState === 'Hold') updateState()
   }
 
   const start = () => {
     if (btn.disabled || commandBusy) return
     armed = true
     btn.classList.add('is-holding')
+    const text = btn.querySelector('.text')
+    if (text) text.textContent = '继续按住'
     setFeedback(`长按确认${CMD_NAMES[cmd]}`, '保持按住 1 秒执行危险动作，松开取消。', 'Hold')
     timer = window.setTimeout(async () => {
       if (!armed) return
@@ -264,12 +361,21 @@ async function loadCars() {
     if (cars.length === 1) selectCar(cars[0])
   } catch (e: any) {
     log(`获取车辆失败: ${e.message}`)
+  } finally {
+    updateState()
   }
 }
 
 function renderCarList(cars: CarInfo[]) {
   const container = $('car-list')
   container.innerHTML = ''
+  if (!cars.length) {
+    const empty = document.createElement('div')
+    empty.className = 'empty-note'
+    empty.textContent = '当前账号暂无车辆，请确认手机号绑定车辆后重试。'
+    container.appendChild(empty)
+    return
+  }
   for (const car of cars) {
     const div = document.createElement('div')
     div.className = 'car-item'
@@ -427,10 +533,6 @@ function init() {
         body: JSON.stringify({ token: cloudToken }),
       }).catch(() => {})
       log('登录成功')
-      $('cloud-state').textContent = '已登录'
-      $('cloud-dot').classList.add('online')
-      $('btn-cloud-login').style.display = 'none'
-      $('btn-cloud-logout').style.display = ''
       cloudMode = true
       await loadCars()
     } catch (e: any) {
@@ -448,10 +550,6 @@ function init() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ token: '' }),
     }).catch(() => {})
-    $('cloud-state').textContent = '离线模式'
-    $('cloud-dot').classList.remove('online')
-    $('btn-cloud-login').style.display = ''
-    $('btn-cloud-logout').style.display = 'none'
     $('car-list').innerHTML = ''
     updateState()
     log('已退出云端登录')
@@ -464,7 +562,7 @@ function init() {
     Object.entries(tabs).forEach(([k, el]) => el.classList.toggle('active', k === t))
     Object.entries(panels).forEach(([k, el]) => (el as HTMLElement).classList.toggle('active', k === t))
     if (t === 'ble') cloudMode = false
-    else cloudMode = !!selectedImei
+    else cloudMode = true
     setConnectionDrawer(true)
     updateState()
   }
@@ -476,10 +574,6 @@ function init() {
   if (savedToken) {
     cloudToken = savedToken
     cloudMode = true
-    $('cloud-state').textContent = '已登录'
-    $('cloud-dot').classList.add('online')
-    $('btn-cloud-login').style.display = 'none'
-    $('btn-cloud-logout').style.display = ''
     loadCars()
   } else {
     fetch('/api/token').then(r => r.json()).then(d => {
@@ -487,10 +581,6 @@ function init() {
         cloudToken = d.token
         localStorage.setItem('cloudToken', d.token)
         cloudMode = true
-        $('cloud-state').textContent = '已登录'
-        $('cloud-dot').classList.add('online')
-        $('btn-cloud-login').style.display = 'none'
-        $('btn-cloud-logout').style.display = ''
         loadCars()
       }
     }).catch(() => {})
@@ -504,7 +594,7 @@ function init() {
     $('advanced-toggle').textContent = isHidden ? '工程调试面板 收起' : '工程调试面板 展开'
   })
 
-  document.getElementById('quick-debug')?.addEventListener('click', () => {
+  document.getElementById('drawer-debug-link')?.addEventListener('click', () => {
     const panel = $('advanced-panel')
     panel.style.display = 'block'
     $('advanced-toggle').textContent = '工程调试面板 收起'
