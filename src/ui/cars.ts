@@ -1,4 +1,3 @@
-import { $ } from '../dom'
 import type { CarInfo } from '../cloud/types'
 
 function buildCarInfoText(car: CarInfo): string {
@@ -8,7 +7,8 @@ function buildCarInfoText(car: CarInfo): string {
 }
 
 export function renderCarList(cars: CarInfo[], onSelect: (car: CarInfo) => void) {
-  const container = $('car-list')
+  const container = document.getElementById('car-list')
+  if (!container) return
   container.innerHTML = ''
   if (!cars.length) {
     const empty = document.createElement('div')
@@ -33,24 +33,19 @@ export function renderCarList(cars: CarInfo[], onSelect: (car: CarInfo) => void)
   }
 }
 
-export function selectCarUI(car: CarInfo) {
+export function selectCarUI(car: CarInfo): { defence: string; power: string } {
   const title = document.getElementById('vehicle-title')
   if (title) title.textContent = car.carNickName || car.carName || car.btname || '台铃智控车'
   document.querySelectorAll('.car-item').forEach(el => el.classList.remove('selected'))
   document.querySelectorAll('.car-item').forEach(el => {
     if ((el as HTMLElement).dataset.imei === car.imei) el.classList.add('selected')
   })
-  $('lock-state').textContent = car.defenceStatus === 1 ? '已设防' : '已解防'
-  $('power-state').textContent = car.acc === 1 ? '已上电' : '已断电'
+
+  const defence = car.defenceStatus === 1 ? '已设防' : '已解防'
+  const power = car.acc === 1 ? '已上电' : '已断电'
 
   const heroVoltage = document.getElementById('hero-voltage-val')
   if (heroVoltage) heroVoltage.textContent = car.voltage != null ? `${car.voltage}V` : '--V'
-
-  const badge = document.getElementById('online-badge')
-  if (badge) {
-    badge.textContent = car.online ? '在线' : '离线'
-    badge.classList.toggle('is-online', car.online)
-  }
 
   const heroBatteryVal = document.getElementById('hero-battery-val')
   if (heroBatteryVal) {
@@ -69,6 +64,8 @@ export function selectCarUI(car: CarInfo) {
 
   const defenceText = document.getElementById('hero-defence-text')
   const powerText = document.getElementById('hero-power-text')
-  if (defenceText) defenceText.textContent = car.defenceStatus === 1 ? '已设防' : '已解防'
-  if (powerText) powerText.textContent = car.acc === 1 ? '已上电' : '已断电'
+  if (defenceText) defenceText.textContent = defence
+  if (powerText) powerText.textContent = power
+
+  return { defence, power }
 }

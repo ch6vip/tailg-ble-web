@@ -13,11 +13,24 @@ const BASE_HEADERS: Record<string, string> = {
 }
 
 async function proxyFetch(url: string, method: string, headers: Record<string, string>, body?: string): Promise<ProxyResponse> {
-  const resp = await fetch(`${PROXY_BASE}/proxy`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url, method, headers: { ...BASE_HEADERS, ...headers }, body }),
-  })
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), 15000)
+  let resp: Response
+  try {
+    resp = await fetch(`${PROXY_BASE}/proxy`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url, method, headers: { ...BASE_HEADERS, ...headers }, body }),
+      signal: controller.signal,
+    })
+  } catch (e: unknown) {
+    clearTimeout(timer)
+    if (e instanceof DOMException && e.name === 'AbortError') {
+      throw new Error('请求超时，请检查网络后重试')
+    }
+    throw e
+  }
+  clearTimeout(timer)
   if (!resp.ok) throw new Error(`Proxy error: ${resp.status}`)
   const res: ProxyResponse = await resp.json()
   const newToken = res.headers['authorization'] || res.headers['Authorization']
