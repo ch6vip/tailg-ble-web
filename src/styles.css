@@ -181,54 +181,26 @@ button {
   background: #f9f3e4;
 }
 
-.bike-visual {
+.car-visual {
   position: relative;
-  height: 84px;
+  height: 120px;
   margin: 8px 0 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.bike-body {
-  position: absolute;
-  left: 10px;
-  right: 10px;
-  bottom: 20px;
-  height: 34px;
-  border-radius: 45px 65px 22px 22px;
-  background: linear-gradient(90deg, #f8f1df, #c7bba2);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.32);
+.car-visual img {
+  max-height: 100%;
+  max-width: 80%;
+  object-fit: contain;
+  filter: drop-shadow(0 12px 32px rgba(0, 0, 0, 0.4));
+  opacity: 0;
+  transition: opacity 0.3s ease;
 }
 
-.bike-body::before {
-  content: "";
-  position: absolute;
-  left: 52px;
-  top: -28px;
-  width: 90px;
-  height: 42px;
-  border: 9px solid #f8f1df;
-  border-bottom: 0;
-  border-radius: 70px 70px 12px 12px;
-  transform: skewX(-18deg);
-}
-
-.wheel {
-  position: absolute;
-  bottom: 2px;
-  width: 46px;
-  height: 46px;
-  border: 8px solid #18231f;
-  border-radius: 50%;
-  outline: 2px solid rgba(255, 255, 255, 0.22);
-  background: var(--cyan);
-}
-
-.wheel.left {
-  left: 34px;
-}
-
-.wheel.right {
-  right: 36px;
-  background: var(--amber);
+.car-visual img[src]:not([src=""]) {
+  opacity: 1;
 }
 
 .hero-grid {
@@ -948,28 +920,9 @@ textarea#log {
     font-size: 1.72rem;
   }
 
-  .bike-visual {
-    height: 46px;
+  .car-visual {
+    height: 80px;
     margin: -2px 0 9px;
-  }
-
-  .bike-body {
-    bottom: 12px;
-    height: 21px;
-  }
-
-  .bike-body::before {
-    left: 40px;
-    top: -17px;
-    width: 62px;
-    height: 26px;
-    border-width: 6px;
-  }
-
-  .wheel {
-    width: 30px;
-    height: 30px;
-    border-width: 5px;
   }
 
   .status-chip {

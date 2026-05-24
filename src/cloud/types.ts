@@ -3,6 +3,8 @@ export interface CarInfo {
   imeiGps: string
   carId: string
   carName: string
+  carNickName: string
+  carPhoto: string
   frame: string
   defenceStatus: '0' | '1'
   acc: '0' | '1'

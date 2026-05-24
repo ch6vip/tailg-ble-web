@@ -370,6 +370,10 @@ async function loadCars() {
 function selectCar(car: CarInfo) {
   selectedCar = car
   selectCarUI(car)
+  const photo = document.getElementById('car-photo') as HTMLImageElement | null
+  if (photo && car.carPhoto) photo.src = car.carPhoto
+  const title = document.getElementById('vehicle-title')
+  if (title) title.textContent = car.carNickName || car.carName || '台铃智控车'
   syncSummary()
   log(`选中车辆: ${car.carName || car.imei} (指令IMEI: ${getCommandImei(car)}, modelType: ${car.modelType})`)
   updateState()
