@@ -114,14 +114,18 @@ export class TailgBleConnection {
       service = await this.server.getPrimaryService(BLE_SERVICE_UUID)
       this._serviceType = 'fee5'
       this.log('发现服务: fee5 (标准协议)')
-    } catch {}
+    } catch (e: unknown) {
+      console.debug('[BLE] fee5 service not available:', e instanceof Error ? e.message : e)
+    }
 
     if (!service) {
       try {
         service = await this.server.getPrimaryService(BLE_SERVICE_FCC0)
         this._serviceType = 'fcc0'
         this.log('发现服务: fcc0 (QGJ/ECU 协议)')
-      } catch {}
+      } catch (e: unknown) {
+        console.debug('[BLE] fcc0 service not available:', e instanceof Error ? e.message : e)
+      }
     }
 
     if (!service) {
@@ -157,8 +161,8 @@ export class TailgBleConnection {
     let services: BluetoothRemoteGATTService[] = []
     try {
       services = await this.server.getPrimaryServices()
-    } catch (e: any) {
-      this.log(`枚举服务失败: ${e.message}`)
+    } catch (e: unknown) {
+      this.log(`枚举服务失败: ${e instanceof Error ? e.message : String(e)}`)
       this.setState('disconnected')
       return
     }
@@ -242,12 +246,12 @@ export class TailgBleConnection {
     this.log(`→ [${charShortId}] ${bytesToHex(data)}`)
     try {
       if (c.properties.writeWithoutResponse) {
-        await c.writeValueWithoutResponse(data as unknown as BufferSource)
+        await c.writeValueWithoutResponse(data as BufferSource)
       } else {
-        await c.writeValue(data as unknown as BufferSource)
+        await c.writeValue(data as BufferSource)
       }
-    } catch (e: any) {
-      this.log(`写入失败: ${e.message}`)
+    } catch (e: unknown) {
+      this.log(`写入失败: ${e instanceof Error ? e.message : String(e)}`)
     }
   }
 
@@ -266,7 +270,9 @@ export class TailgBleConnection {
           this.notifyChar = c
           this.log(`使用特征: ${uuid.substring(4, 8)}`)
           return
-        } catch {}
+        } catch (e: unknown) {
+          console.debug(`[BLE] characteristic ${uuid.substring(4, 8)} not available:`, e instanceof Error ? e.message : e)
+        }
       }
     }
 
@@ -289,7 +295,7 @@ export class TailgBleConnection {
 
   async write(data: Uint8Array): Promise<void> {
     if (!this.writeChar) throw new Error('Not connected')
-    await this.writeChar.writeValue(data as unknown as BufferSource)
+    await this.writeChar.writeValue(data as BufferSource)
   }
 
   private handleNotify(event: Event) {

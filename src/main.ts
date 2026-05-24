@@ -4,59 +4,12 @@ import { buildQgjLoginFrame } from './ble/qgj-protocol'
 import { bytesToHex } from './utils/hex'
 import { AES_KEYS, type CommandCode, type ModelType, type ParsedResponse } from './types'
 import { getSmsCode, login, getCarStatus, sendCommand } from './cloud/api'
+import { persistToken } from './cloud/token'
 import type { CarInfo, CloudCmd } from './cloud/types'
-
-function $(id: string): HTMLElement {
-  const el = document.getElementById(id)
-  if (!el) throw new Error(`Missing DOM element #${id}`)
-  return el
-}
-const MAX_LOG_LINES = 400
-
-function initLock() {
-  const saved = sessionStorage.getItem('unlocked')
-  if (saved === '1') { unlock(); return }
-
-  $('lock-btn').addEventListener('click', tryUnlock)
-  $('lock-pwd').addEventListener('keydown', (e) => {
-    if ((e as KeyboardEvent).key === 'Enter') tryUnlock()
-  })
-}
-
-function registerServiceWorker() {
-  if (!('serviceWorker' in navigator)) return
-  if (!window.isSecureContext) return
-  navigator.serviceWorker.register('/sw.js').catch(() => {
-    // PWA registration is best-effort; vehicle control must not depend on it.
-    console.warn('Service worker registration failed')
-  })
-}
-
-async function tryUnlock() {
-  const pwd = ($('lock-pwd') as HTMLInputElement).value
-  if (!pwd) return
-  try {
-    const resp = await fetch('/auth', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: pwd }),
-    })
-    const data = await resp.json()
-    if (data.ok) {
-      sessionStorage.setItem('unlocked', '1')
-      unlock()
-    } else {
-      $('lock-error').classList.add('is-visible')
-    }
-  } catch {
-    $('lock-error').classList.add('is-visible')
-  }
-}
-
-function unlock() {
-  $('lock-screen').classList.add('is-hidden')
-  document.querySelector('.app')!.classList.remove('is-hidden')
-}
+import { $, errMsg, log } from './dom'
+import { initLock } from './ui/lock'
+import { renderCarList, selectCarUI } from './ui/cars'
+import { setFeedback, shouldRenderReadyFeedback, resetFeedbackState, getFeedbackState } from './ui/feedback'
 
 let conn: TailgBleConnection
 let cloudToken = ''
@@ -66,8 +19,6 @@ let controlBusy = false
 let debugBusy = false
 const commandTimeouts: Partial<Record<'debug' | 'control', number>> = {}
 const busyCommands: Partial<Record<'debug' | 'control', string>> = {}
-type FeedbackMark = 'Idle' | 'Ready' | 'Hold' | 'TX' | 'OK' | 'Fail' | 'Timeout'
-let currentFeedbackState: FeedbackMark = 'Idle'
 let supportNotesChecked = false
 
 const CMD_NAMES: Record<string, string> = {
@@ -88,35 +39,12 @@ function getSelectedKey(): string {
   return AES_KEYS[select.value as ModelType]
 }
 
-function log(msg: string) {
-  const el = $('log') as HTMLTextAreaElement
-  const ts = new Date().toLocaleTimeString()
-  const lines = el.value ? el.value.split('\n').filter(Boolean) : []
-  lines.push(`[${ts}] ${msg}`)
-  if (lines.length > MAX_LOG_LINES) lines.splice(0, lines.length - MAX_LOG_LINES)
-  el.value = `${lines.join('\n')}\n`
-  el.scrollTop = el.scrollHeight
-}
-
-function setFeedback(title: string, text: string, mark: FeedbackMark = 'Idle') {
-  currentFeedbackState = mark
-  const box = document.querySelector<HTMLElement>('.feedback')
-  const titleEl = document.getElementById('command-feedback-title')
-  const textEl = document.getElementById('command-feedback-text')
-  const markEl = document.getElementById('command-feedback-mark')
-  if (box) box.dataset.state = mark
-  if (titleEl) titleEl.textContent = title
-  if (textEl) textEl.textContent = text
-  if (markEl) markEl.textContent = mark
-}
-
-function shouldRenderReadyFeedback() {
-  return currentFeedbackState === 'Idle' || currentFeedbackState === 'Ready'
-}
-
-function resetFeedbackToAvailability() {
-  currentFeedbackState = 'Idle'
-  updateState()
+function registerServiceWorker() {
+  if (!('serviceWorker' in navigator)) return
+  if (!window.isSecureContext) return
+  navigator.serviceWorker.register('/sw.js').catch(() => {
+    console.warn('Service worker registration failed')
+  })
 }
 
 function getControlStatus() {
@@ -132,25 +60,13 @@ function getControlStatus() {
     }
   }
   if (cloudReady) {
-    return {
-      label: '云端已登录',
-      detail: '当前使用云端控车',
-      online: true,
-    }
+    return { label: '云端已登录', detail: '当前使用云端控车', online: true }
   }
   if (bleReady) {
-    return {
-      label: '蓝牙已认证',
-      detail: '当前使用蓝牙直连',
-      online: true,
-    }
+    return { label: '蓝牙已认证', detail: '当前使用蓝牙直连', online: true }
   }
   if (cloudToken && !selectedImei) {
-    return {
-      label: '云端待选车',
-      detail: '请选择车辆后控车',
-      online: false,
-    }
+    return { label: '云端待选车', detail: '请选择车辆后控车', online: false }
   }
   if (channel === 'ble') {
     return {
@@ -159,11 +75,7 @@ function getControlStatus() {
       online: false,
     }
   }
-  return {
-    label: '云端未登录',
-    detail: '登录或切换蓝牙后控车',
-    online: false,
-  }
+  return { label: '云端未登录', detail: '登录或切换蓝牙后控车', online: false }
 }
 
 function updateControlStatus() {
@@ -274,11 +186,8 @@ function updateState() {
   stateEl.textContent = stateMap[conn.state]
   stateEl.className = `state-${conn.state}`
 
-  const nameEl = $('device-name')
-  nameEl.textContent = conn.deviceName || '-'
-
-  const tokenEl = $('token-val')
-  tokenEl.textContent = conn.token || '-'
+  $('device-name').textContent = conn.deviceName || '-'
+  $('token-val').textContent = conn.token || '-'
 
   const btns = document.querySelectorAll<HTMLButtonElement>('.cmd-btn')
   const canControl = activeChannel === 'cloud' ? !!cloudToken && !!selectedImei : conn.state === 'authenticated'
@@ -329,10 +238,11 @@ async function sendCmd(cmd: CommandCode) {
   setFeedback('蓝牙指令发送中', `${name}命令已写入蓝牙链路，等待车辆回执。`, 'TX')
   try {
     await conn.write(data)
-  } catch (e: any) {
+  } catch (e: unknown) {
+    const msg = errMsg(e)
     setCommandBusy(false, cmd)
-    setFeedback('蓝牙指令发送失败', e.message, 'Fail')
-    log(`蓝牙指令发送失败: ${e.message}`)
+    setFeedback('蓝牙指令发送失败', msg, 'Fail')
+    log(`蓝牙指令发送失败: ${msg}`)
   }
 }
 
@@ -353,22 +263,18 @@ async function sendCloudCmd(cmd: CommandCode) {
     log(`← 云端响应: ${msg}`)
     setCommandBusy(false, cmd)
     setFeedback('云端指令已返回', msg, 'OK')
-  } catch (e: any) {
-    log(`云端指令失败: ${e.message}`)
+  } catch (e: unknown) {
+    const msg = errMsg(e)
+    log(`云端指令失败: ${msg}`)
     setCommandBusy(false, cmd)
-    setFeedback('云端指令失败', e.message, 'Fail')
+    setFeedback('云端指令失败', msg, 'Fail')
   }
 }
 
 function clearCloudSession(reason?: string) {
   cloudToken = ''
   selectedImei = ''
-  localStorage.removeItem('cloudToken')
-  fetch('/api/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token: '' }),
-  }).catch(() => {})
+  persistToken('')
   $('car-list').innerHTML = ''
   if (reason) {
     log(reason)
@@ -394,7 +300,10 @@ function armDangerousCommand(btn: HTMLButtonElement, cmd: CommandCode, run: () =
     btn.classList.remove('is-holding')
     const text = btn.querySelector('.text')
     if (text) text.textContent = originalText
-    if (currentFeedbackState === 'Hold') resetFeedbackToAvailability()
+    if (getFeedbackState() === 'Hold') {
+      resetFeedbackState()
+      updateState()
+    }
   }
 
   const start = (event: PointerEvent) => {
@@ -428,11 +337,12 @@ async function loadCars() {
     log('获取车辆列表...')
     const cars = await getCarStatus(cloudToken)
     log(`找到 ${cars.length} 辆车`)
-    renderCarList(cars)
+    renderCarList(cars, selectCar)
     if (cars.length === 1) selectCar(cars[0])
-  } catch (e: any) {
-    log(`获取车辆失败: ${e.message}`)
-    if (cloudToken && /token|登录|认证|授权|401|403|过期|失效/i.test(e.message)) {
+  } catch (e: unknown) {
+    const msg = errMsg(e)
+    log(`获取车辆失败: ${msg}`)
+    if (cloudToken && /token|登录|认证|授权|401|403|过期|失效/i.test(msg)) {
       clearCloudSession('云端 token 已失效，已清理登录状态')
     }
   } finally {
@@ -440,51 +350,9 @@ async function loadCars() {
   }
 }
 
-function buildCarInfoText(car: CarInfo): string {
-  const defence = car.defenceStatus === '1' ? '已设防' : '已解防'
-  const acc = car.acc === '1' ? '已上电' : '已断电'
-  return `IMEI: ${car.imei} | ${defence} | ${acc} | 电量: ${car.electricQuantity || '-'}%`
-}
-
-function renderCarList(cars: CarInfo[]) {
-  const container = $('car-list')
-  container.innerHTML = ''
-  if (!cars.length) {
-    const empty = document.createElement('div')
-    empty.className = 'empty-note'
-    empty.textContent = '当前账号暂无车辆，请确认手机号绑定车辆后重试。'
-    container.appendChild(empty)
-    return
-  }
-  for (const car of cars) {
-    const div = document.createElement('div')
-    div.className = 'car-item'
-    div.dataset.imei = car.imei
-    const name = document.createElement('div')
-    name.className = 'car-name'
-    name.textContent = car.carName || car.btname || car.imei
-    const info = document.createElement('div')
-    info.className = 'car-info'
-    info.textContent = buildCarInfoText(car)
-    div.append(name, info)
-    div.addEventListener('click', () => selectCar(car))
-    container.appendChild(div)
-  }
-}
-
 function selectCar(car: CarInfo) {
   selectedImei = car.imei
-  const title = document.getElementById('vehicle-title')
-  if (title) title.textContent = car.carName || car.btname || '台铃智控车'
-  document.querySelectorAll('.car-item').forEach(el => el.classList.remove('selected'))
-  const items = document.querySelectorAll('.car-item')
-  items.forEach(el => {
-    if ((el as HTMLElement).dataset.imei === car.imei) el.classList.add('selected')
-  })
-  $('lock-state').textContent = car.defenceStatus === '1' ? '已设防' : '已解防'
-  $('power-state').textContent = car.acc === '1' ? '已上电' : '已断电'
-  $('battery-val').textContent = car.electricQuantity ? `${car.electricQuantity}%` : '-'
-  $('voltage-val').textContent = car.voltage ? `${car.voltage}V` : '-'
+  selectCarUI(car)
   syncSummary()
   log(`选中车辆: ${car.carName || car.imei}`)
   updateState()
@@ -501,8 +369,8 @@ function init() {
     try {
       conn.keyHex = getSelectedKey()
       await conn.scanAndConnect()
-    } catch (e: any) {
-      log(`连接失败: ${e.message}`)
+    } catch (e: unknown) {
+      log(`连接失败: ${errMsg(e)}`)
     }
     updateState()
   })
@@ -512,8 +380,8 @@ function init() {
       conn.keyHex = getSelectedKey()
       await conn.scanAll()
       await conn.connectToSelected()
-    } catch (e: any) {
-      log(`连接失败: ${e.message}`)
+    } catch (e: unknown) {
+      log(`连接失败: ${errMsg(e)}`)
     }
     updateState()
   })
@@ -523,8 +391,8 @@ function init() {
       conn.keyHex = getSelectedKey()
       await conn.scanAll()
       await conn.diagnose()
-    } catch (e: any) {
-      log(`诊断失败: ${e.message}`)
+    } catch (e: unknown) {
+      log(`诊断失败: ${errMsg(e)}`)
     }
     updateState()
   })
@@ -550,10 +418,11 @@ function init() {
         } else {
           await sendCmd(cmd)
         }
-      } catch (e: any) {
+      } catch (e: unknown) {
         setCommandBusy(false, btn.dataset.cmd ?? '')
-        log(`指令执行异常: ${e.message}`)
-        setFeedback('指令执行异常', e.message || '请检查连接后重试。', 'Fail')
+        const msg = errMsg(e)
+        log(`指令执行异常: ${msg}`)
+        setFeedback('指令执行异常', msg || '请检查连接后重试。', 'Fail')
       }
     }
     const cmd = btn.dataset.cmd as CommandCode
@@ -598,7 +467,6 @@ function init() {
     await conn.writeRaw('fe02', bytesToHex(loginFrame))
   })
 
-  // --- 云端控车 ---
   $('btn-get-code').addEventListener('click', async () => {
     const phone = ($('phone-input') as HTMLInputElement).value.trim()
     if (!phone) { log('请输入手机号'); return }
@@ -606,8 +474,8 @@ function init() {
       log(`获取验证码: ${phone}`)
       await getSmsCode(phone)
       log('验证码已发送')
-    } catch (e: any) {
-      log(`获取验证码失败: ${e.message}`)
+    } catch (e: unknown) {
+      log(`获取验证码失败: ${errMsg(e)}`)
     }
   })
 
@@ -618,17 +486,12 @@ function init() {
     try {
       log('正在登录...')
       cloudToken = await login(phone, sms)
-      localStorage.setItem('cloudToken', cloudToken)
-      fetch('/api/token', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: cloudToken }),
-      }).catch(() => {})
+      persistToken(cloudToken)
       log('登录成功')
       activeChannel = 'cloud'
       await loadCars()
-    } catch (e: any) {
-      log(`登录失败: ${e.message}`)
+    } catch (e: unknown) {
+      log(`登录失败: ${errMsg(e)}`)
     }
   })
 
@@ -637,7 +500,6 @@ function init() {
     log('已退出云端登录')
   })
 
-  // --- Tabs ---
   const tabs = { cloud: $('tab-cloud'), ble: $('tab-ble') }
   const panels = { cloud: $('panel-cloud'), ble: $('panel-ble') }
   function switchTab(t: 'cloud' | 'ble') {
@@ -650,7 +512,6 @@ function init() {
   tabs.cloud.addEventListener('click', () => switchTab('cloud'))
   tabs.ble.addEventListener('click', () => switchTab('ble'))
 
-  // --- 恢复登录状态 ---
   const savedToken = localStorage.getItem('cloudToken')
   if (savedToken) {
     cloudToken = savedToken
@@ -667,7 +528,6 @@ function init() {
     }).catch(() => {})
   }
 
-  // --- Advanced panel ---
   $('advanced-toggle').addEventListener('click', () => {
     const panel = $('advanced-panel')
     const willOpen = !panel.classList.contains('is-open')
