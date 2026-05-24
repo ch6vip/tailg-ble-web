@@ -5,7 +5,7 @@ import { bytesToHex } from './utils/hex'
 import { AES_KEYS, type CommandCode, type ModelType, type ParsedResponse } from './types'
 import { getSmsCode, login, getCarStatus, sendCommand } from './cloud/api'
 import { persistToken } from './cloud/token'
-import type { CarInfo, CloudCmd } from './cloud/types'
+import { getCommandImei, type CarInfo, type CloudCmd } from './cloud/types'
 import { $, errMsg, log } from './dom'
 import { initLock } from './ui/lock'
 import { renderCarList, selectCarUI } from './ui/cars'
@@ -13,7 +13,7 @@ import { setFeedback, shouldRenderReadyFeedback, resetFeedbackState, getFeedback
 
 let conn: TailgBleConnection
 let cloudToken = ''
-let selectedImei = ''
+let selectedCar: CarInfo | null = null
 let activeChannel: 'cloud' | 'ble' = 'cloud'
 let controlBusy = false
 let debugBusy = false
@@ -48,7 +48,7 @@ function registerServiceWorker() {
 }
 
 function getControlStatus() {
-  const cloudReady = !!cloudToken && !!selectedImei
+  const cloudReady = !!cloudToken && !!selectedCar
   const bleReady = conn?.state === 'authenticated'
   const channel = activeChannel
 
@@ -65,7 +65,7 @@ function getControlStatus() {
   if (bleReady) {
     return { label: '蓝牙已认证', detail: '当前使用蓝牙直连', online: true }
   }
-  if (cloudToken && !selectedImei) {
+  if (cloudToken && !selectedCar) {
     return { label: '云端待选车', detail: '请选择车辆后控车', online: false }
   }
   if (channel === 'ble') {
@@ -190,7 +190,7 @@ function updateState() {
   $('token-val').textContent = conn.token || '-'
 
   const btns = document.querySelectorAll<HTMLButtonElement>('.cmd-btn')
-  const canControl = activeChannel === 'cloud' ? !!cloudToken && !!selectedImei : conn.state === 'authenticated'
+  const canControl = activeChannel === 'cloud' ? !!cloudToken && !!selectedCar : conn.state === 'authenticated'
   btns.forEach((btn) => {
     const cmd = btn.dataset.cmd ?? ''
     const group = getCommandGroup(cmd)
@@ -255,11 +255,12 @@ async function sendCloudCmd(cmd: CommandCode) {
   const cloudCmd = CMD_MAP[cmd]
   if (!cloudCmd) { log(`云端不支持指令: ${cmd}`); return }
   const name = CMD_NAMES[cmd] ?? cloudCmd
+  const imei = getCommandImei(selectedCar!)
   try {
-    log(`→ 云端指令: ${cloudCmd} (IMEI: ${selectedImei})`)
+    log(`→ 云端指令: ${cloudCmd} (IMEI: ${imei})`)
     setCommandBusy(true, cmd)
     setFeedback('云端指令发送中', `正在发送${name}，等待台铃云端响应。`, 'TX')
-    const msg = await sendCommand(cloudToken, selectedImei, cloudCmd)
+    const msg = await sendCommand(cloudToken, imei, cloudCmd)
     log(`← 云端响应: ${msg}`)
     setCommandBusy(false, cmd)
     setFeedback('云端指令已返回', msg, 'OK')
@@ -273,7 +274,7 @@ async function sendCloudCmd(cmd: CommandCode) {
 
 function clearCloudSession(reason?: string) {
   cloudToken = ''
-  selectedImei = ''
+  selectedCar = null
   persistToken('')
   $('car-list').innerHTML = ''
   if (reason) {
@@ -354,10 +355,10 @@ async function loadCars() {
 }
 
 function selectCar(car: CarInfo) {
-  selectedImei = car.imei
+  selectedCar = car
   selectCarUI(car)
   syncSummary()
-  log(`选中车辆: ${car.carName || car.imei}`)
+  log(`选中车辆: ${car.carName || car.imei} (指令IMEI: ${getCommandImei(car)}, modelType: ${car.modelType})`)
   updateState()
 }
 
@@ -416,7 +417,7 @@ function init() {
         const cmd = btn.dataset.cmd as CommandCode
         if (!cmd) return
         if (isGroupBusy(getCommandGroup(cmd))) return
-        if (activeChannel === 'cloud' && selectedImei) {
+        if (activeChannel === 'cloud' && selectedCar) {
           await sendCloudCmd(cmd)
         } else {
           await sendCmd(cmd)
