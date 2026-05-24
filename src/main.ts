@@ -110,7 +110,27 @@ function updateButtons() {
     btn.disabled = !canControl || (group === 'debug' ? debugBusy : controlBusy)
   })
   if (!canControl && shouldRenderReadyFeedback()) {
-    setFeedback('等待控车指令', '连接车辆或登录云端后即可使用常用控车。', 'Idle')
+    let title = '等待控车指令'
+    let text = '连接车辆或登录云端后即可使用常用控车。'
+    if (activeChannel === 'cloud') {
+      if (!cloudToken) {
+        title = '请先登录云端'
+        text = '输入手机号和验证码，登录后会自动加载已绑定车辆。'
+      } else if (!selectedCar) {
+        title = '请选择车辆'
+        text = '车辆列表加载完成后，点选一辆车再执行控车指令。'
+      }
+    } else if (bleState === 'connecting') {
+      title = '蓝牙连接中'
+      text = '正在建立 GATT 链路并等待认证，完成后按钮会自动启用。'
+    } else if (bleState === 'connected') {
+      title = '等待蓝牙认证'
+      text = '设备已连接，等待握手令牌完成后即可控车。'
+    } else {
+      title = '请连接蓝牙'
+      text = '使用快连配对或全频扫描连接车辆主控。'
+    }
+    setFeedback(title, text, 'Idle')
   } else if (!controlBusy && !debugBusy && shouldRenderReadyFeedback()) {
     setFeedback('控车已就绪', activeChannel === 'cloud' ? '当前指令将通过云端发送。' : '当前指令将通过蓝牙直连发送。', 'Ready')
   }
