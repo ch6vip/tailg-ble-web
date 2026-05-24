@@ -485,18 +485,13 @@ function init() {
     }).catch(() => {})
   }
 
-  $('advanced-toggle').addEventListener('click', () => {
-    const panel = $('advanced-panel')
-    const willOpen = !panel.classList.contains('is-open')
-    panel.classList.toggle('is-open', willOpen)
-    $('advanced-toggle').textContent = willOpen ? '工程调试面板 收起' : '工程调试面板 展开'
-  })
-
   document.getElementById('drawer-debug-link')?.addEventListener('click', () => {
     const panel = $('advanced-panel')
-    panel.classList.add('is-open')
-    $('advanced-toggle').textContent = '工程调试面板 收起'
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    const trigger = $('drawer-debug-link')
+    const willOpen = !panel.classList.contains('is-open')
+    panel.classList.toggle('is-open', willOpen)
+    trigger.textContent = willOpen ? '收起高级调试' : '高级调试'
+    if (willOpen) panel.scrollIntoView({ behavior: 'smooth', block: 'start' })
   })
 
   document.getElementById('connection-toggle')?.addEventListener('click', () => {

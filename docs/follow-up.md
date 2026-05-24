@@ -84,10 +84,10 @@
   - 问题：断点根据 DevTools emulation 和当前布局确定，仍需覆盖 360/390/430px 真机宽度。
   - 建议：安卓 Chrome/Edge 和 iOS Safari 各测一次主要页面状态。
   - 验收：主流手机宽度下首屏控车区、反馈区和状态栏不拥挤、不遮挡。
-  - 真机步骤：分别在约 360px、390px、430px CSS 宽度设备上打开首页，检查车辆总览、状态卡、常用控车、反馈条、连接设置和底部浮动状态栏。
-  - 真机步骤：展开连接设置和工程调试面板，滚动到页面底部，确认无横向滚动、无底部浮动条遮挡内容、背景过渡不突兀。
+  - 真机步骤：分别在约 360px、390px、430px CSS 宽度设备上打开首页，检查车辆总览、状态卡、常用控车、反馈条和连接设置。
+  - 真机步骤：展开连接设置，并从其中打开高级调试，滚动到页面底部，确认无横向滚动、无遮挡内容、背景过渡不突兀。
   - 记录字段：设备型号、浏览器版本、CSS viewport 宽度、是否横向溢出、是否遮挡、截图路径。
-  - 本地补充验证：2026-05-24 Chrome DevTools 分别模拟 360x740、390x844、430x932 移动视口，展开连接设置和工程调试面板后 `scrollWidth === innerWidth`，控车区和反馈区均未被底部浮动状态栏遮挡。该结果不替代真实设备复核。
+  - 本地补充验证：2026-05-24 Chrome DevTools 分别模拟 360x740、390x844、430x932 移动视口，展开连接设置和高级调试后 `scrollWidth === innerWidth`，控车区和反馈区均未被遮挡。该结果不替代真实设备复核。
 
 - [x] 评估背景渐变随页面高度变化的影响。
   - 问题：背景仍绑定在 `body` 整页高度，抽屉或日志展开后过渡位置会变化。
@@ -98,10 +98,10 @@
   - 问题：部分安卓 WebView 或旧 iOS Safari 对 `backdrop-filter` 支持不一致。
   - 建议：已为关键半透明组件准备无 blur 的可接受 fallback，仍需真机或目标 WebView 复核。
   - 验收：不支持 blur 的浏览器上文字仍清晰、组件层级仍明确。
-  - 真机步骤：在安卓 Chrome/Edge、iOS Safari、目标 WebView 或内置浏览器中打开页面，观察底部浮动状态栏、卡片、连接按钮和车辆列表。
+  - 真机步骤：在安卓 Chrome/Edge、iOS Safari、目标 WebView 或内置浏览器中打开页面，观察车辆总览、卡片、连接按钮和车辆列表。
   - 真机步骤：如果浏览器不支持 `backdrop-filter`，确认 fallback 背景足够不透明，文字对比度和卡片层级仍清晰。
   - 记录字段：设备型号、浏览器或 WebView 版本、是否支持 blur、fallback 是否生效、截图路径。
-  - 本地补充验证：2026-05-24 Chrome DevTools 检测当前 Chromium 支持 `backdrop-filter`，底部浮动状态栏计算样式为 `blur(16px)`；CSS 已包含 `@supports not` fallback。该结果不替代目标 WebView 或旧版 Safari/安卓真机复核。
+  - 本地补充验证：2026-05-24 Chrome DevTools 检测当前 Chromium 支持 `backdrop-filter`；CSS 已包含 `@supports not` fallback。该结果不替代目标 WebView 或旧版 Safari/安卓真机复核。
 
 - [x] 优化移动端输入属性。
   - 问题：手机号、验证码、Hex 输入缺少更精确的 `autocomplete`、`inputmode`、`maxlength` 等属性。
