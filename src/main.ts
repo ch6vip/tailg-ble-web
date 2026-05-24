@@ -50,32 +50,26 @@ function registerServiceWorker() {
 function getControlStatus() {
   const cloudReady = !!cloudToken && !!selectedCar
   const bleReady = conn?.state === 'authenticated'
-  const channel = activeChannel
+  const vehicleOnline = selectedCar?.online === true
 
-  if (cloudReady && bleReady) {
+  if (cloudReady || bleReady) {
     return {
-      label: '双通道可用',
-      detail: channel === 'cloud' ? '当前使用云端控车' : '当前使用蓝牙直连',
+      label: vehicleOnline ? '在线' : '就绪',
+      detail: activeChannel === 'cloud' ? '当前使用云端控车' : '当前使用蓝牙直连',
       online: true,
     }
   }
-  if (cloudReady) {
-    return { label: '云端已登录', detail: '当前使用云端控车', online: true }
-  }
-  if (bleReady) {
-    return { label: '蓝牙已认证', detail: '当前使用蓝牙直连', online: true }
-  }
   if (cloudToken && !selectedCar) {
-    return { label: '云端待选车', detail: '请选择车辆后控车', online: false }
+    return { label: '待选车', detail: '请选择车辆后控车', online: false }
   }
-  if (channel === 'ble') {
+  if (activeChannel === 'ble') {
     return {
-      label: conn?.state === 'connecting' ? '蓝牙连接中' : '蓝牙未连接',
+      label: conn?.state === 'connecting' ? '连接中' : '离线',
       detail: '连接车辆后即可控车',
       online: false,
     }
   }
-  return { label: '云端未登录', detail: '登录或切换蓝牙后控车', online: false }
+  return { label: '离线', detail: '登录或切换蓝牙后控车', online: false }
 }
 
 function updateControlStatus() {
