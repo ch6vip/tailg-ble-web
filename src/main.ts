@@ -154,6 +154,14 @@ function syncSummary() {
 
 // PLACEHOLDER_MAIN_PART2
 
+function setAdvancedPanel(open: boolean) {
+  const panel = document.getElementById('advanced-panel')
+  const trigger = document.getElementById('drawer-debug-link')
+  panel?.classList.toggle('is-open', open)
+  if (trigger) trigger.textContent = open ? '收起高级调试' : '高级调试'
+  if (open) panel?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+}
+
 function setConnectionDrawer(open: boolean) {
   const drawer = document.getElementById('connection-drawer')
   const toggle = document.getElementById('connection-toggle')
@@ -161,6 +169,7 @@ function setConnectionDrawer(open: boolean) {
   toggle?.classList.toggle('open', open)
   const state = toggle?.querySelector('strong')
   if (state) state.textContent = open ? '收起' : '展开'
+  if (!open) setAdvancedPanel(false)
 }
 
 function handleResponse(resp: ParsedResponse) {
@@ -487,11 +496,7 @@ function init() {
 
   document.getElementById('drawer-debug-link')?.addEventListener('click', () => {
     const panel = $('advanced-panel')
-    const trigger = $('drawer-debug-link')
-    const willOpen = !panel.classList.contains('is-open')
-    panel.classList.toggle('is-open', willOpen)
-    trigger.textContent = willOpen ? '收起高级调试' : '高级调试'
-    if (willOpen) panel.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setAdvancedPanel(!panel.classList.contains('is-open'))
   })
 
   document.getElementById('connection-toggle')?.addEventListener('click', () => {
