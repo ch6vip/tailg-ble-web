@@ -71,9 +71,10 @@ export async function getCarStatus(token: string): Promise<CarInfo[]> {
     `${API_V1}app/centralControl/carStatus`,
     'POST',
     { 'Content-Type': 'application/json', Authorization: token },
-    JSON.stringify({ phoneMode: 'web' })
+    JSON.stringify({ phoneMode: 'SM-G998B' })
   )
   const data = JSON.parse(res.body)
+  console.debug('[Cloud] carStatus raw response:', JSON.stringify(data, null, 2))
   if (!isSuccess(data)) {
     throw new Error(data.msg || '获取车辆信息失败')
   }
@@ -101,7 +102,7 @@ export async function checkToken(token: string): Promise<boolean> {
       `${API_V1}app/centralControl/carStatus`,
       'POST',
       { 'Content-Type': 'application/json', Authorization: token },
-      JSON.stringify({ phoneMode: 'web' })
+      JSON.stringify({ phoneMode: 'SM-G998B' })
     )
     return res.status === 200 && !res.body.includes('"401"')
   } catch (e: unknown) {
