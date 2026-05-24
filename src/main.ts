@@ -76,12 +76,8 @@ function updateControlStatus() {
   const status = getControlStatus()
   const cloudState = document.getElementById('cloud-state')
   const cloudDot = document.getElementById('cloud-dot')
-  const quickStatus = document.getElementById('quick-status')
-  const floating = document.querySelector<HTMLElement>('.floating')
   if (cloudState) cloudState.textContent = status.label
   cloudDot?.classList.toggle('online', status.online)
-  floating?.classList.toggle('is-online', status.online)
-  if (quickStatus) quickStatus.textContent = status.detail
 }
 
 function updateCloudSessionView() {
@@ -226,7 +222,8 @@ function handleResponse(resp: ParsedResponse) {
   log(`← 收到 [${resp.type}]: ${resp.raw}`)
 
   if (resp.type === 'voltage' && resp.voltage != null) {
-    $('voltage-val').textContent = `${resp.voltage.toFixed(1)} V`
+    const heroVoltage = document.getElementById('hero-voltage-val')
+    if (heroVoltage) heroVoltage.textContent = `${resp.voltage.toFixed(1)}V`
   }
   if (resp.type === 'state' && resp.bikeState) {
     $('lock-state').textContent = resp.bikeState.isLocked ? '已设防' : '已解防'
@@ -566,11 +563,6 @@ function init() {
   document.getElementById('connection-toggle')?.addEventListener('click', () => {
     const drawer = document.getElementById('connection-drawer')
     setConnectionDrawer(!drawer?.classList.contains('open'))
-  })
-
-  document.getElementById('quick-connect')?.addEventListener('click', () => {
-    setConnectionDrawer(true)
-    document.getElementById('connection-toggle')?.scrollIntoView({ behavior: 'smooth', block: 'center' })
   })
 
   updateState()

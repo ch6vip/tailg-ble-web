@@ -42,8 +42,9 @@ export function selectCarUI(car: CarInfo) {
   })
   $('lock-state').textContent = car.defenceStatus === 1 ? '已设防' : '已解防'
   $('power-state').textContent = car.acc === 1 ? '已上电' : '已断电'
-  $('battery-val').textContent = car.electricQuantity != null ? `${car.electricQuantity}%` : '-'
-  $('voltage-val').textContent = car.voltage != null ? `${car.voltage}V` : '-'
+
+  const heroVoltage = document.getElementById('hero-voltage-val')
+  if (heroVoltage) heroVoltage.textContent = car.voltage != null ? `${car.voltage}V` : '--V'
 
   const badge = document.getElementById('online-badge')
   if (badge) {

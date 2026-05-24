@@ -206,56 +206,6 @@ button {
   padding: 20px 0 0;
 }
 
-.dashboard {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.dash-box {
-  min-height: 116px;
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: 28px;
-  background: var(--panel);
-  box-shadow: 0 14px 38px rgba(27, 37, 31, 0.11);
-}
-
-.dash-box .val {
-  display: block;
-  margin-top: 14px;
-  font-size: 2.05rem;
-  line-height: 1;
-  font-weight: 800;
-  letter-spacing: -0.07em;
-}
-
-.metric-hint {
-  display: block;
-  margin-top: 10px;
-  color: #4c5b55;
-  font-size: 0.76rem;
-}
-
-.dash-box.accent .metric-hint {
-  color: rgba(249, 243, 228, 0.72);
-}
-
-.dash-box.accent {
-  color: #f9f3e4;
-  border-color: rgba(255, 255, 255, 0.08);
-  background: linear-gradient(145deg, #17342e, #0e1c19);
-}
-
-.dash-wide.sr-state {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-}
-
 .section-title,
 .panel-title {
   display: flex;
@@ -717,58 +667,6 @@ textarea#log {
   line-height: 1.55;
 }
 
-.floating {
-  position: fixed;
-  left: 50%;
-  bottom: 10px;
-  width: min(calc(100% - 28px), 402px);
-  transform: translateX(-50%);
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  gap: 8px;
-  align-items: center;
-  padding: 8px 8px 8px 14px;
-  border: 1px solid rgba(16, 26, 23, 0.12);
-  border-radius: 999px;
-  background: rgba(247, 240, 223, 0.94);
-  box-shadow: 0 14px 34px rgba(27, 37, 31, 0.16);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-}
-
-.floating::before {
-  content: "";
-  width: 9px;
-  height: 9px;
-  border-radius: 999px;
-  background: var(--amber);
-  box-shadow: 0 0 0 5px rgba(231, 144, 34, 0.14);
-}
-
-.floating.is-online::before {
-  background: var(--green);
-  box-shadow: 0 0 0 5px rgba(20, 165, 111, 0.16);
-}
-
-.floating span {
-  color: #2f3f39;
-  font-size: 0.82rem;
-}
-
-.floating button {
-  border: 0;
-  border-radius: 999px;
-  padding: 9px 13px;
-  color: #f9f3e4;
-  background: var(--ink);
-  font-weight: 800;
-}
-
-.floating-actions {
-  display: flex;
-  gap: 7px;
-}
-
 .state-disconnected {
   color: var(--red) !important;
 }
@@ -852,7 +750,6 @@ textarea#log {
 }
 
 @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
-  .floating,
   .card,
   .connection-toggle,
   .cloud-session,
@@ -924,6 +821,11 @@ textarea#log {
   font-size: 1rem;
 }
 
+.hero-voltage-val {
+  color: rgba(249, 243, 228, 0.62);
+  font-size: 0.82rem;
+}
+
 .hero-mileage-val {
   color: rgba(249, 243, 228, 0.62);
   font-size: 0.82rem;
@@ -993,29 +895,8 @@ textarea#log {
     margin: -2px 0 9px;
   }
 
-  .dash-box {
-    min-height: 86px;
-    padding: 12px;
-    border-radius: 22px;
-  }
-
-  .dash-box .val {
-    margin-top: 10px;
-    font-size: 1.78rem;
-  }
-
-  .metric-hint {
-    margin-top: 7px;
-    font-size: 0.72rem;
-  }
-
   .sheet {
     padding-top: 14px;
-  }
-
-  .dashboard {
-    gap: 10px;
-    margin-bottom: 12px;
   }
 
   .section-title {
@@ -1036,25 +917,6 @@ textarea#log {
 
   .ctrl-btn .text {
     font-size: 0.78rem;
-  }
-
-  .floating {
-    position: sticky;
-    left: auto;
-    bottom: 10px;
-    width: 100%;
-    min-height: 48px;
-    margin-top: 14px;
-    padding: 7px 7px 7px 12px;
-    transform: none;
-  }
-
-  .floating span {
-    font-size: 0.76rem;
-  }
-
-  .floating button {
-    padding: 8px 11px;
   }
 }
 

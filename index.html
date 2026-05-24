@@ -60,6 +60,8 @@
         </svg>
         <span class="hero-battery-val" id="hero-battery-val">--%</span>
         <span class="hero-battery-sep">&middot;</span>
+        <span class="hero-voltage-val" id="hero-voltage-val">--V</span>
+        <span class="hero-battery-sep">&middot;</span>
         <span class="hero-mileage-val" id="hero-mileage-val"></span>
       </div>
 
@@ -83,24 +85,8 @@
     </section>
 
     <section class="sheet">
-      <div class="dashboard">
-        <div class="dash-box metric accent">
-          <div class="label">电池余量</div>
-          <div class="val" id="battery-val">--</div>
-          <small class="metric-hint">登录或连接后更新</small>
-        </div>
-        <div class="dash-box metric">
-          <div class="label">实时电压</div>
-          <div class="val" id="voltage-val">--</div>
-          <small class="metric-hint">等待车辆回传</small>
-        </div>
-      </div>
-
       <div class="section-title">
-        <div>
-          <small>常用操作</small>
-          <h2>常用控车</h2>
-        </div>
+        <h2>常用控车</h2>
         <small>危险动作谨慎操作</small>
       </div>
 
@@ -239,12 +225,6 @@
         </div>
       </section>
 
-      <div class="floating">
-        <span id="quick-status">连接车辆后即可控车</span>
-        <div class="floating-actions">
-          <button type="button" id="quick-connect">连接</button>
-        </div>
-      </div>
     </section>
   </main>
 
