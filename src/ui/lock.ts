@@ -12,6 +12,7 @@ async function tryUnlock() {
     const resp = await fetch('/auth', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
+      credentials: 'same-origin',
       body: JSON.stringify({ password: pwd }),
     })
     const data = await resp.json()

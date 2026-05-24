@@ -7,6 +7,7 @@ export function persistToken(token: string): void {
   fetch('/api/token', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
+    credentials: 'same-origin',
     body: JSON.stringify({ token }),
   }).catch(() => {})
 }

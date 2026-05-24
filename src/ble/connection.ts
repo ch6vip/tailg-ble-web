@@ -21,10 +21,14 @@ export class TailgBleConnection {
   private _keyHex: string
   private _serviceType: 'fee5' | 'fcc0' | 'unknown' = 'unknown'
   private _chars: Map<string, BluetoothRemoteGATTCharacteristic> = new Map()
+  private _reconnectAttempts = 0
+  private _maxReconnectAttempts = 3
+  private _reconnecting = false
 
   onStateChange: ((state: ConnectionState) => void) | null = null
   onResponse: ((resp: ParsedResponse) => void) | null = null
   onLog: ((msg: string) => void) | null = null
+  onDisconnect: (() => void) | null = null
 
   constructor(keyHex: string) {
     this._keyHex = keyHex
@@ -87,10 +91,47 @@ export class TailgBleConnection {
 
   private attachDisconnectListener() {
     this.device?.addEventListener('gattserverdisconnected', () => {
-      this.setState('disconnected')
       this.log('设备断开连接')
+      if (this._state !== 'disconnected') {
+        this.setState('disconnected')
+        this.onDisconnect?.()
+        this.attemptReconnect()
+      }
     })
   }
+
+  async attemptReconnect(): Promise<void> {
+    if (this._reconnecting || !this.device?.gatt) return
+    this._reconnecting = true
+    this._reconnectAttempts = 0
+
+    while (this._reconnectAttempts < this._maxReconnectAttempts) {
+      this._reconnectAttempts++
+      const delay = Math.pow(2, this._reconnectAttempts) * 1000
+      this.log(`重连中 (${this._reconnectAttempts}/${this._maxReconnectAttempts})，${delay / 1000}s 后重试...`)
+      await new Promise(r => setTimeout(r, delay))
+
+      if (this._state !== 'disconnected') {
+        this._reconnecting = false
+        return
+      }
+
+      try {
+        await this.connect()
+        this.log('重连成功')
+        this._reconnecting = false
+        this._reconnectAttempts = 0
+        return
+      } catch (e: unknown) {
+        this.log(`重连失败: ${e instanceof Error ? e.message : String(e)}`)
+      }
+    }
+
+    this._reconnecting = false
+    this.log('重连次数已用尽，请手动重新扫描连接')
+  }
+
+  get isReconnecting() { return this._reconnecting }
 
   async connectToSelected(): Promise<void> {
     await this.connect()
@@ -220,20 +261,20 @@ export class TailgBleConnection {
       const loginHex = 'A700000A10010000000000000000'
       await this.writeRaw('feb1', loginHex)
 
-      // 等待 500ms 让登录响应回来，然后尝试发 ECU 指令到 fcc1
-      await new Promise(r => setTimeout(r, 500))
+      await this.waitMs(2000)
       if (this._chars.has('fcc1')) {
         this.log('\n--- 登录后尝试 fcc1 指令 ---')
-        // 尝试读取状态 (TLink 格式: 85 03 C2 0D 00 ...)
         await this.writeRaw('fcc1', '8503C20D001111111111111100000000')
-        await new Promise(r => setTimeout(r, 500))
-        // 也试试 kuyi V2 格式的 lock 查询
+        await this.waitMs(2000)
         await this.writeRaw('fcc1', 'A700000320010000')
-        await new Promise(r => setTimeout(r, 500))
-        // 试试原始 ECU 心跳
+        await this.waitMs(2000)
         await this.writeRaw('fcc1', 'D0018E0AFF00000001AA')
       }
     }
+  }
+
+  private waitMs(ms: number): Promise<void> {
+    return new Promise(r => setTimeout(r, ms))
   }
 
   async writeRaw(charShortId: string, hexData: string): Promise<void> {
@@ -295,7 +336,10 @@ export class TailgBleConnection {
 
   async write(data: Uint8Array): Promise<void> {
     if (!this.writeChar) throw new Error('Not connected')
-    await this.writeChar.writeValue(data as BufferSource)
+    const timeout = new Promise<never>((_, reject) =>
+      setTimeout(() => reject(new Error('蓝牙写入超时(5s)，请检查连接')), 5000)
+    )
+    await Promise.race([this.writeChar.writeValue(data as BufferSource), timeout])
   }
 
   private handleNotify(event: Event) {

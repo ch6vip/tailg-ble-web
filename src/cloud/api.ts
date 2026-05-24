@@ -46,6 +46,14 @@ interface ApiResponse {
   data?: unknown
 }
 
+function parseBody(body: string): ApiResponse {
+  try {
+    return JSON.parse(body)
+  } catch {
+    throw new Error(`服务器返回非 JSON 数据: ${body.substring(0, 100)}`)
+  }
+}
+
 function isSuccess(data: ApiResponse): boolean {
   const code = String(data.code)
   return code === '200' || code === '0' || (data.msg?.includes('成功') ?? false)
@@ -57,7 +65,7 @@ export async function getSmsCode(phone: string): Promise<void> {
     'POST',
     {},
   )
-  const data = JSON.parse(res.body)
+  const data = parseBody(res.body)
   if (!isSuccess(data)) {
     throw new Error(data.msg || `服务器返回: ${res.body}`)
   }
@@ -73,7 +81,7 @@ export async function login(phone: string, smsCode: string): Promise<string> {
 
   const token = res.headers['authorization'] || res.headers['Authorization']
   if (!token) {
-    const data = JSON.parse(res.body)
+    const data = parseBody(res.body)
     throw new Error(data.msg || '登录失败，未返回 token')
   }
   return token
@@ -86,12 +94,12 @@ export async function getCarStatus(token: string): Promise<CarInfo[]> {
     { 'Content-Type': 'application/json', Authorization: token },
     JSON.stringify({ phoneMode: 'SM-G998B' })
   )
-  const data = JSON.parse(res.body)
+  const data = parseBody(res.body)
   console.debug('[Cloud] carStatus raw response:', JSON.stringify(data, null, 2))
   if (!isSuccess(data)) {
     throw new Error(data.msg || '获取车辆信息失败')
   }
-  const result = data.data
+  const result = data.data as CarInfo | CarInfo[]
   return Array.isArray(result) ? result : [result]
 }
 
@@ -102,7 +110,7 @@ export async function sendCommand(token: string, imei: string, cmd: CloudCmd): P
     { 'Content-Type': 'application/json', Authorization: token },
     JSON.stringify({ imei })
   )
-  const data = JSON.parse(res.body)
+  const data = parseBody(res.body)
   if (!isSuccess(data)) {
     throw new Error(data.msg || `指令 ${cmd} 失败`)
   }

@@ -1,45 +1,22 @@
 import { TailgBleConnection } from './ble/connection'
-import { buildCommand } from './ble/protocol'
 import { buildQgjLoginFrame } from './ble/qgj-protocol'
 import { bytesToHex } from './utils/hex'
-import { AES_KEYS, type CommandCode, type ModelType, type ParsedResponse } from './types'
-import { getSmsCode, login, getCarStatus, sendCommand } from './cloud/api'
+import { type CommandCode, type ParsedResponse } from './types'
+import { getSmsCode, login, getCarStatus } from './cloud/api'
 import { persistToken } from './cloud/token'
-import { getCommandImei, type CarInfo, type CloudCmd } from './cloud/types'
+import { getCommandImei, type CarInfo } from './cloud/types'
 import { $, errMsg, log } from './dom'
 import { initLock } from './ui/lock'
 import { renderCarList, selectCarUI } from './ui/cars'
 import { setFeedback, shouldRenderReadyFeedback, resetFeedbackState, getFeedbackState } from './ui/feedback'
+import { getState, setState, subscribe } from './state'
+import {
+  CMD_NAMES, DANGEROUS_COMMANDS, getCommandGroup, getBusyCommand,
+  getSelectedKey, setCommandBusy, executeCommand,
+} from './commands'
 
 let conn: TailgBleConnection
-let cloudToken = ''
-let selectedCar: CarInfo | null = null
-let activeChannel: 'cloud' | 'ble' = 'cloud'
-let controlBusy = false
-let debugBusy = false
-let defenceState = '--'
-let powerState = '--'
-const commandTimeouts: Partial<Record<'debug' | 'control', number>> = {}
-const busyCommands: Partial<Record<'debug' | 'control', string>> = {}
 let supportNotesChecked = false
-
-const CMD_NAMES: Record<string, string> = {
-  '01': '设防',
-  '02': '解防',
-  '05': '开坐垫',
-  '06': '上电',
-  '07': '断电',
-  '08': '寻车',
-  '0D': '状态帧',
-  '0E': '防盗帧',
-}
-
-const DANGEROUS_COMMANDS = new Set<CommandCode>(['01', '07'])
-
-function getSelectedKey(): string {
-  const select = $('model-select') as HTMLSelectElement
-  return AES_KEYS[select.value as ModelType]
-}
 
 function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) return
@@ -49,40 +26,35 @@ function registerServiceWorker() {
   })
 }
 
-function getControlStatus() {
+function updateControlStatus() {
+  const { cloudToken, selectedCar, activeChannel, bleState } = getState()
   const cloudReady = !!cloudToken && !!selectedCar
-  const bleReady = conn?.state === 'authenticated'
+  const bleReady = bleState === 'authenticated'
   const vehicleOnline = selectedCar?.online === true
 
+  let label: string, online: boolean
   if (cloudReady || bleReady) {
-    return {
-      label: vehicleOnline ? '在线' : '就绪',
-      detail: activeChannel === 'cloud' ? '当前使用云端控车' : '当前使用蓝牙直连',
-      online: true,
-    }
+    label = vehicleOnline ? '在线' : '就绪'
+    online = true
+  } else if (cloudToken && !selectedCar) {
+    label = '待选车'
+    online = false
+  } else if (activeChannel === 'ble') {
+    label = bleState === 'connecting' ? '连接中' : '离线'
+    online = false
+  } else {
+    label = '离线'
+    online = false
   }
-  if (cloudToken && !selectedCar) {
-    return { label: '待选车', detail: '请选择车辆后控车', online: false }
-  }
-  if (activeChannel === 'ble') {
-    return {
-      label: conn?.state === 'connecting' ? '连接中' : '离线',
-      detail: '连接车辆后即可控车',
-      online: false,
-    }
-  }
-  return { label: '离线', detail: '登录或切换蓝牙后控车', online: false }
-}
 
-function updateControlStatus() {
-  const status = getControlStatus()
   const cloudState = document.getElementById('cloud-state')
   const cloudDot = document.getElementById('cloud-dot')
-  if (cloudState) cloudState.textContent = status.label
-  cloudDot?.classList.toggle('online', status.online)
+  if (cloudState) cloudState.textContent = label
+  cloudDot?.classList.toggle('online', online)
 }
 
 function updateCloudSessionView() {
+  const { cloudToken, selectedCar } = getState()
   const loginForm = document.getElementById('cloud-login-form')
   const session = document.getElementById('cloud-session')
   const isLoggedIn = !!cloudToken
@@ -115,75 +87,27 @@ function updateSupportNotes() {
   note.classList.add('is-hidden')
 }
 
-function getCommandGroup(cmd: string): 'debug' | 'control' {
-  return cmd === '0D' || cmd === '0E' ? 'debug' : 'control'
-}
-
-function isGroupBusy(group: 'debug' | 'control') {
-  return group === 'debug' ? debugBusy : controlBusy
-}
-
-function setGroupBusy(group: 'debug' | 'control', isBusy: boolean) {
-  if (group === 'debug') debugBusy = isBusy
-  else controlBusy = isBusy
-}
-
 function renderBusyClasses() {
   document.querySelectorAll<HTMLButtonElement>('.cmd-btn').forEach((btn) => {
     const group = getCommandGroup(btn.dataset.cmd ?? '')
-    btn.classList.toggle('is-busy', !!busyCommands[group] && busyCommands[group] === btn.dataset.cmd)
+    const busyCmd = getBusyCommand(group)
+    btn.classList.toggle('is-busy', !!busyCmd && busyCmd === btn.dataset.cmd)
   })
 }
 
-function setCommandBusy(isBusy: boolean, name = '') {
-  const group = getCommandGroup(name)
-  if (commandTimeouts[group] != null) {
-    window.clearTimeout(commandTimeouts[group])
-    commandTimeouts[group] = undefined
-  }
-  setGroupBusy(group, isBusy)
-  busyCommands[group] = isBusy ? name : undefined
-  renderBusyClasses()
-  if (isBusy) {
-    const label = CMD_NAMES[name] ?? name
-    commandTimeouts[group] = window.setTimeout(() => {
-      commandTimeouts[group] = undefined
-      setGroupBusy(group, false)
-      busyCommands[group] = undefined
-      renderBusyClasses()
-      updateState()
-      setFeedback(`${label}执行超时`, '未在预期时间内收到回执，按钮已恢复，可检查链路后重试。', 'Timeout')
-      log(`${label}执行超时，已恢复控车按钮`)
-    }, 10000)
-  }
-  updateState()
-}
-
-function syncSummary() {
-  const defenceEl = document.getElementById('hero-defence-text')
-  const powerEl = document.getElementById('hero-power-text')
-  if (defenceEl) defenceEl.textContent = defenceState
-  if (powerEl) powerEl.textContent = powerState
-}
-
-function setConnectionDrawer(open: boolean) {
-  const drawer = document.getElementById('connection-drawer')
-  const toggle = document.getElementById('connection-toggle')
-  drawer?.classList.toggle('open', open)
-  if (toggle) toggle.textContent = open ? '连接设置 收起' : '连接设置 展开'
-}
-
 function updateBleInfo() {
-  $('device-name').textContent = conn.deviceName || '-'
-  $('token-val').textContent = conn.token || '-'
+  const { bleDeviceName, bleToken } = getState()
+  $('device-name').textContent = bleDeviceName || '-'
+  $('token-val').textContent = bleToken || '-'
 }
 
 function updateButtons() {
-  const canControl = activeChannel === 'cloud' ? !!cloudToken && !!selectedCar : conn.state === 'authenticated'
+  const { activeChannel, cloudToken, selectedCar, bleState, controlBusy, debugBusy } = getState()
+  const canControl = activeChannel === 'cloud' ? !!cloudToken && !!selectedCar : bleState === 'authenticated'
   document.querySelectorAll<HTMLButtonElement>('.cmd-btn').forEach((btn) => {
     const cmd = btn.dataset.cmd ?? ''
     const group = getCommandGroup(cmd)
-    btn.disabled = !canControl || isGroupBusy(group)
+    btn.disabled = !canControl || (group === 'debug' ? debugBusy : controlBusy)
   })
   if (!canControl && shouldRenderReadyFeedback()) {
     setFeedback('等待控车指令', '连接车辆或登录云端后即可使用常用控车。', 'Idle')
@@ -192,13 +116,21 @@ function updateButtons() {
   }
 }
 
-function updateState() {
-  updateBleInfo()
-  updateButtons()
-  syncSummary()
-  updateControlStatus()
-  updateCloudSessionView()
-  updateSupportNotes()
+function syncSummary() {
+  const { defenceState, powerState } = getState()
+  const defenceEl = document.getElementById('hero-defence-text')
+  const powerEl = document.getElementById('hero-power-text')
+  if (defenceEl) defenceEl.textContent = defenceState
+  if (powerEl) powerEl.textContent = powerState
+}
+
+// PLACEHOLDER_MAIN_PART2
+
+function setConnectionDrawer(open: boolean) {
+  const drawer = document.getElementById('connection-drawer')
+  const toggle = document.getElementById('connection-toggle')
+  drawer?.classList.toggle('open', open)
+  if (toggle) toggle.textContent = open ? '连接设置 收起' : '连接设置 展开'
 }
 
 function handleResponse(resp: ParsedResponse) {
@@ -209,9 +141,10 @@ function handleResponse(resp: ParsedResponse) {
     if (heroVoltage) heroVoltage.textContent = `${resp.voltage.toFixed(1)}V`
   }
   if (resp.type === 'state' && resp.bikeState) {
-    defenceState = resp.bikeState.isLocked ? '已设防' : '已解防'
-    powerState = resp.bikeState.isPowerOn ? '已上电' : '已断电'
-    syncSummary()
+    setState({
+      defenceState: resp.bikeState.isLocked ? '已设防' : '已解防',
+      powerState: resp.bikeState.isPowerOn ? '已上电' : '已断电',
+    })
   }
   if (resp.type === 'command') {
     const name = CMD_NAMES[resp.commandType ?? ''] ?? resp.commandType
@@ -225,63 +158,43 @@ function handleResponse(resp: ParsedResponse) {
   }
 }
 
-async function sendCmd(cmd: CommandCode) {
-  const name = CMD_NAMES[cmd] ?? cmd
-  const data = buildCommand(getSelectedKey(), cmd, conn.token)
-  log(`→ 发送指令 [${cmd}]: ${bytesToHex(data)}`)
-  setCommandBusy(true, cmd)
-  setFeedback('蓝牙指令发送中', `${name}命令已写入蓝牙链路，等待车辆回执。`, 'TX')
-  try {
-    await conn.write(data)
-  } catch (e: unknown) {
-    const msg = errMsg(e)
-    setCommandBusy(false, cmd)
-    setFeedback('蓝牙指令发送失败', msg, 'Fail')
-    log(`蓝牙指令发送失败: ${msg}`)
-  }
-}
-
-const CMD_MAP: Record<string, CloudCmd> = {
-  '01': 'lock', '02': 'unlock', '05': 'openCushion',
-  '06': 'start', '07': 'stop', '08': 'search',
-}
-
-async function sendCloudCmd(cmd: CommandCode) {
-  const cloudCmd = CMD_MAP[cmd]
-  if (!cloudCmd) { log(`云端不支持指令: ${cmd}`); return }
-  const name = CMD_NAMES[cmd] ?? cloudCmd
-  const imei = getCommandImei(selectedCar!)
-  try {
-    log(`→ 云端指令: ${cloudCmd} (IMEI: ${imei})`)
-    setCommandBusy(true, cmd)
-    setFeedback('云端指令发送中', `正在发送${name}，等待台铃云端响应。`, 'TX')
-    const msg = await sendCommand(cloudToken, imei, cloudCmd)
-    log(`← 云端响应: ${msg}`)
-    setCommandBusy(false, cmd)
-    setFeedback('云端指令已返回', msg, 'OK')
-    if (cmd === '01') defenceState = '已设防'
-    else if (cmd === '02') defenceState = '已解防'
-    else if (cmd === '06') powerState = '已上电'
-    else if (cmd === '07') powerState = '已断电'
-    syncSummary()
-  } catch (e: unknown) {
-    const msg = errMsg(e)
-    log(`云端指令失败: ${msg}`)
-    setCommandBusy(false, cmd)
-    setFeedback('云端指令失败', msg, 'Fail')
-  }
-}
-
 function clearCloudSession(reason?: string) {
-  cloudToken = ''
-  selectedCar = null
+  setState({ cloudToken: '', selectedCar: null })
   persistToken('')
   $('car-list').innerHTML = ''
   if (reason) {
     log(reason)
     setFeedback('云端登录已失效', '请重新获取验证码并登录。', 'Fail')
   }
-  updateState()
+}
+
+async function loadCars() {
+  const { cloudToken } = getState()
+  try {
+    log('获取车辆列表...')
+    const cars = await getCarStatus(cloudToken)
+    log(`找到 ${cars.length} 辆车`)
+    renderCarList(cars, selectCar)
+    if (cars.length === 1) selectCar(cars[0])
+  } catch (e: unknown) {
+    const msg = errMsg(e)
+    log(`获取车辆失败: ${msg}`)
+    if (cloudToken && /token|登录|认证|授权|401|403|过期|失效/i.test(msg)) {
+      clearCloudSession('云端 token 已失效，已清理登录状态')
+    }
+  }
+}
+
+function selectCar(car: CarInfo) {
+  const uiState = selectCarUI(car)
+  setState({
+    selectedCar: car,
+    defenceState: uiState.defence,
+    powerState: uiState.power,
+  })
+  const photo = document.getElementById('car-photo') as HTMLImageElement | null
+  if (photo && car.carPhoto) photo.src = car.carPhoto
+  log(`选中车辆: ${car.carNickName || car.carName || car.imei} (指令IMEI: ${getCommandImei(car)}, modelType: ${car.modelType})`)
 }
 
 function armDangerousCommand(btn: HTMLButtonElement, cmd: CommandCode, run: () => Promise<void>) {
@@ -303,12 +216,12 @@ function armDangerousCommand(btn: HTMLButtonElement, cmd: CommandCode, run: () =
     if (text) text.textContent = originalText
     if (getFeedbackState() === 'Hold') {
       resetFeedbackState()
-      updateState()
+      updateButtons()
     }
   }
 
   const start = (event: PointerEvent) => {
-    if (btn.disabled || controlBusy) return
+    if (btn.disabled || getState().controlBusy) return
     event.preventDefault()
     pointerId = event.pointerId
     btn.setPointerCapture?.(event.pointerId)
@@ -333,41 +246,29 @@ function armDangerousCommand(btn: HTMLButtonElement, cmd: CommandCode, run: () =
   window.addEventListener('blur', reset)
 }
 
-async function loadCars() {
-  try {
-    log('获取车辆列表...')
-    const cars = await getCarStatus(cloudToken)
-    log(`找到 ${cars.length} 辆车`)
-    renderCarList(cars, selectCar)
-    if (cars.length === 1) selectCar(cars[0])
-  } catch (e: unknown) {
-    const msg = errMsg(e)
-    log(`获取车辆失败: ${msg}`)
-    if (cloudToken && /token|登录|认证|授权|401|403|过期|失效/i.test(msg)) {
-      clearCloudSession('云端 token 已失效，已清理登录状态')
-    }
-  } finally {
-    updateState()
-  }
-}
-
-function selectCar(car: CarInfo) {
-  selectedCar = car
-  const state = selectCarUI(car)
-  defenceState = state.defence
-  powerState = state.power
-  const photo = document.getElementById('car-photo') as HTMLImageElement | null
-  if (photo && car.carPhoto) photo.src = car.carPhoto
-  log(`选中车辆: ${car.carNickName || car.carName || car.imei} (指令IMEI: ${getCommandImei(car)}, modelType: ${car.modelType})`)
-  updateState()
-}
+// PLACEHOLDER_MAIN_INIT
 
 function init() {
   initLock()
   conn = new TailgBleConnection(getSelectedKey())
-  conn.onStateChange = updateState
+  conn.onStateChange = () => {
+    setState({ bleState: conn.state, bleToken: conn.token, bleDeviceName: conn.deviceName })
+  }
   conn.onResponse = handleResponse
   conn.onLog = log
+
+  subscribe((_state, changed) => {
+    if (changed.has('bleState') || changed.has('bleToken') || changed.has('bleDeviceName')) updateBleInfo()
+    if (changed.has('controlBusy') || changed.has('debugBusy') || changed.has('bleState') ||
+        changed.has('cloudToken') || changed.has('selectedCar') || changed.has('activeChannel')) {
+      updateButtons()
+      renderBusyClasses()
+    }
+    if (changed.has('defenceState') || changed.has('powerState')) syncSummary()
+    if (changed.has('cloudToken') || changed.has('selectedCar') || changed.has('activeChannel') ||
+        changed.has('bleState')) updateControlStatus()
+    if (changed.has('cloudToken') || changed.has('selectedCar')) updateCloudSessionView()
+  })
 
   $('btn-scan').addEventListener('click', async () => {
     try {
@@ -376,7 +277,6 @@ function init() {
     } catch (e: unknown) {
       log(`连接失败: ${errMsg(e)}`)
     }
-    updateState()
   })
 
   $('btn-scan-all').addEventListener('click', async () => {
@@ -387,7 +287,6 @@ function init() {
     } catch (e: unknown) {
       log(`连接失败: ${errMsg(e)}`)
     }
-    updateState()
   })
 
   $('btn-diagnose').addEventListener('click', async () => {
@@ -398,12 +297,10 @@ function init() {
     } catch (e: unknown) {
       log(`诊断失败: ${errMsg(e)}`)
     }
-    updateState()
   })
 
   $('btn-disconnect').addEventListener('click', () => {
     conn.disconnect()
-    updateState()
   })
 
   ;($('model-select') as HTMLSelectElement).addEventListener('change', () => {
@@ -416,12 +313,7 @@ function init() {
       try {
         const cmd = btn.dataset.cmd as CommandCode
         if (!cmd) return
-        if (isGroupBusy(getCommandGroup(cmd))) return
-        if (activeChannel === 'cloud' && selectedCar) {
-          await sendCloudCmd(cmd)
-        } else {
-          await sendCmd(cmd)
-        }
+        await executeCommand(conn, cmd)
       } catch (e: unknown) {
         setCommandBusy(false, btn.dataset.cmd ?? '')
         const msg = errMsg(e)
@@ -489,10 +381,10 @@ function init() {
     if (!phone || !sms) { log('请输入手机号和验证码'); return }
     try {
       log('正在登录...')
-      cloudToken = await login(phone, sms)
-      persistToken(cloudToken)
+      const token = await login(phone, sms)
+      setState({ cloudToken: token, activeChannel: 'cloud' })
+      persistToken(token)
       log('登录成功')
-      activeChannel = 'cloud'
       await loadCars()
     } catch (e: unknown) {
       log(`登录失败: ${errMsg(e)}`)
@@ -509,24 +401,22 @@ function init() {
   function switchTab(t: 'cloud' | 'ble') {
     Object.entries(tabs).forEach(([k, el]) => el.classList.toggle('active', k === t))
     Object.entries(panels).forEach(([k, el]) => (el as HTMLElement).classList.toggle('active', k === t))
-    activeChannel = t
+    setState({ activeChannel: t })
     setConnectionDrawer(true)
-    updateState()
   }
   tabs.cloud.addEventListener('click', () => switchTab('cloud'))
   tabs.ble.addEventListener('click', () => switchTab('ble'))
 
   const savedToken = localStorage.getItem('cloudToken')
   if (savedToken) {
-    cloudToken = savedToken
-    activeChannel = 'cloud'
+    setState({ cloudToken: savedToken, activeChannel: 'cloud' })
     loadCars()
   } else {
-    fetch('/api/token').then(r => r.json()).then(d => {
+    fetch('/api/token', { credentials: 'same-origin' }).then(r => r.ok ? r.json() : null).then(d => {
+      if (!d) return
       if (d.token) {
-        cloudToken = d.token
+        setState({ cloudToken: d.token, activeChannel: 'cloud' })
         localStorage.setItem('cloudToken', d.token)
-        activeChannel = 'cloud'
         loadCars()
       }
     }).catch(() => {})
@@ -551,7 +441,12 @@ function init() {
     setConnectionDrawer(!drawer?.classList.contains('open'))
   })
 
-  updateState()
+  updateSupportNotes()
+  updateBleInfo()
+  updateButtons()
+  syncSummary()
+  updateControlStatus()
+  updateCloudSessionView()
 }
 
 document.addEventListener('DOMContentLoaded', init)
