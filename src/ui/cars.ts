@@ -3,7 +3,8 @@ import type { CarInfo } from '../cloud/types'
 function buildCarInfoText(car: CarInfo): string {
   const defence = car.defenceStatus === 1 ? '已设防' : '已解防'
   const acc = car.acc === 1 ? '已上电' : '已断电'
-  return `IMEI: ${car.imei} | ${defence} | ${acc} | 电量: ${car.electricQuantity ?? '-'}%`
+  const online = car.online === true ? '在线' : '离线'
+  return `IMEI: ${car.imei} | ${online} | ${defence} | ${acc} | 电量: ${car.electricQuantity ?? '-'}%`
 }
 
 export function renderCarList(cars: CarInfo[], onSelect: (car: CarInfo) => void) {
@@ -52,14 +53,16 @@ export function selectCarUI(car: CarInfo): { defence: string; power: string } {
     heroBatteryVal.textContent = car.electricQuantity != null ? `${car.electricQuantity}%` : '--%'
   }
   const fillBar = document.getElementById('battery-fill-bar')
-  if (fillBar && car.electricQuantity != null) {
-    const pct = Math.min(100, Math.max(0, Number(car.electricQuantity)))
-    fillBar.setAttribute('width', String(Math.round(pct * 0.2)))
+  if (fillBar) {
+    const pct = car.electricQuantity != null
+      ? Math.min(100, Math.max(0, Number(car.electricQuantity)))
+      : 0
+    fillBar.style.width = `${pct}%`
   }
 
   const heroMileage = document.getElementById('hero-mileage-val')
   if (heroMileage) {
-    heroMileage.textContent = car.mileage != null ? `预估 ${car.mileage} km` : ''
+    heroMileage.textContent = car.mileage != null ? `${car.mileage} km` : '--'
   }
 
   const defenceText = document.getElementById('hero-defence-text')

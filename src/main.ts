@@ -136,6 +136,14 @@ function updateButtons() {
   }
 }
 
+function setActionError(title: string, e: unknown) {
+  const msg = errMsg(e)
+  const text = /timeout|超时/i.test(msg)
+    ? '请求超时，请检查网络或车辆连接后重试。'
+    : msg || '操作未完成，请稍后重试。'
+  setFeedback(title, text, 'Fail')
+}
+
 function syncSummary() {
   const { defenceState, powerState } = getState()
   const defenceEl = document.getElementById('hero-defence-text')
@@ -150,7 +158,9 @@ function setConnectionDrawer(open: boolean) {
   const drawer = document.getElementById('connection-drawer')
   const toggle = document.getElementById('connection-toggle')
   drawer?.classList.toggle('open', open)
-  if (toggle) toggle.textContent = open ? '连接设置 收起' : '连接设置 展开'
+  toggle?.classList.toggle('open', open)
+  const state = toggle?.querySelector('strong')
+  if (state) state.textContent = open ? '收起' : '展开'
 }
 
 function handleResponse(resp: ParsedResponse) {
@@ -195,12 +205,20 @@ async function loadCars() {
     const cars = await getCarStatus(cloudToken)
     log(`找到 ${cars.length} 辆车`)
     renderCarList(cars, selectCar)
-    if (cars.length === 1) selectCar(cars[0])
+    if (cars.length === 1) {
+      selectCar(cars[0])
+    } else if (cars.length > 1) {
+      setFeedback('请选择车辆', `当前账号找到 ${cars.length} 辆车，选择后即可控车。`, 'Idle')
+    } else {
+      setFeedback('暂无绑定车辆', '当前账号没有返回车辆，请确认手机号已绑定台铃车辆。', 'Fail')
+    }
   } catch (e: unknown) {
     const msg = errMsg(e)
     log(`获取车辆失败: ${msg}`)
     if (cloudToken && /token|登录|认证|授权|401|403|过期|失效/i.test(msg)) {
       clearCloudSession('云端 token 已失效，已清理登录状态')
+    } else {
+      setActionError('获取车辆失败', e)
     }
   }
 }
@@ -213,7 +231,12 @@ function selectCar(car: CarInfo) {
     powerState: uiState.power,
   })
   const photo = document.getElementById('car-photo') as HTMLImageElement | null
-  if (photo && car.carPhoto) photo.src = car.carPhoto
+  if (photo) photo.src = car.carPhoto || ''
+  setFeedback(
+    car.online === true ? '车辆已选中' : '车辆已选中，当前离线',
+    car.online === true ? '云端控车已就绪，可以发送常用控车指令。' : '车辆离线时云端指令可能延迟或失败。',
+    car.online === true ? 'Ready' : 'Idle',
+  )
   log(`选中车辆: ${car.carNickName || car.carName || car.imei} (指令IMEI: ${getCommandImei(car)}, modelType: ${car.modelType})`)
 }
 
@@ -292,30 +315,36 @@ function init() {
 
   $('btn-scan').addEventListener('click', async () => {
     try {
+      setFeedback('蓝牙快连中', '正在查找并连接车辆主控，请保持车辆在附近。', 'TX')
       conn.keyHex = getSelectedKey()
       await conn.scanAndConnect()
     } catch (e: unknown) {
       log(`连接失败: ${errMsg(e)}`)
+      setActionError('蓝牙连接失败', e)
     }
   })
 
   $('btn-scan-all').addEventListener('click', async () => {
     try {
+      setFeedback('蓝牙扫描中', '正在扫描附近设备，选择匹配车辆后会继续连接。', 'TX')
       conn.keyHex = getSelectedKey()
       await conn.scanAll()
       await conn.connectToSelected()
     } catch (e: unknown) {
       log(`连接失败: ${errMsg(e)}`)
+      setActionError('蓝牙连接失败', e)
     }
   })
 
   $('btn-diagnose').addEventListener('click', async () => {
     try {
+      setFeedback('蓝牙诊断中', '正在扫描服务和特征值，结果会写入工程日志。', 'TX')
       conn.keyHex = getSelectedKey()
       await conn.scanAll()
       await conn.diagnose()
     } catch (e: unknown) {
       log(`诊断失败: ${errMsg(e)}`)
+      setActionError('蓝牙诊断失败', e)
     }
   })
 
@@ -385,29 +414,43 @@ function init() {
 
   $('btn-get-code').addEventListener('click', async () => {
     const phone = ($('phone-input') as HTMLInputElement).value.trim()
-    if (!phone) { log('请输入手机号'); return }
+    if (!phone) {
+      log('请输入手机号')
+      setFeedback('请输入手机号', '填写绑定车辆的手机号后再获取验证码。', 'Fail')
+      return
+    }
     try {
       log(`获取验证码: ${phone}`)
+      setFeedback('正在获取验证码', '验证码请求已发送，请等待短信返回。', 'TX')
       await getSmsCode(phone)
       log('验证码已发送')
+      setFeedback('验证码已发送', '收到短信后输入验证码完成云端登录。', 'OK')
     } catch (e: unknown) {
       log(`获取验证码失败: ${errMsg(e)}`)
+      setActionError('获取验证码失败', e)
     }
   })
 
   $('btn-cloud-login').addEventListener('click', async () => {
     const phone = ($('phone-input') as HTMLInputElement).value.trim()
     const sms = ($('sms-input') as HTMLInputElement).value.trim()
-    if (!phone || !sms) { log('请输入手机号和验证码'); return }
+    if (!phone || !sms) {
+      log('请输入手机号和验证码')
+      setFeedback('登录信息不完整', '请输入手机号和短信验证码后再登录。', 'Fail')
+      return
+    }
     try {
       log('正在登录...')
+      setFeedback('云端登录中', '正在验证短信验证码并获取云端 token。', 'TX')
       const token = await login(phone, sms)
       setState({ cloudToken: token, activeChannel: 'cloud' })
       persistToken(token)
       log('登录成功')
+      setFeedback('云端登录成功', '正在加载账号绑定车辆。', 'OK')
       await loadCars()
     } catch (e: unknown) {
       log(`登录失败: ${errMsg(e)}`)
+      setActionError('云端登录失败', e)
     }
   })
 

@@ -48,6 +48,9 @@
       <path d="M8 20v-4" />
       <path d="M18 20v-4" />
     </symbol>
+    <symbol id="icon-chevron" viewBox="0 0 24 24">
+      <path d="m6 9 6 6 6-6" />
+    </symbol>
   </svg>
   <div class="lock-screen" id="lock-screen">
     <div class="lock-box">
@@ -79,21 +82,32 @@
         </div>
       </div>
 
-      <div class="hero-battery" id="hero-battery">
-        <svg class="hero-battery-icon" width="28" height="14" viewBox="0 0 28 14" fill="none" aria-hidden="true">
-          <rect x="0.5" y="0.5" width="24" height="13" rx="2.5" stroke="currentColor" stroke-opacity="0.6"/>
-          <rect id="battery-fill-bar" x="2" y="2" width="0" height="10" rx="1.5" fill="currentColor"/>
-          <path d="M25.5 4.5v5a2 2 0 0 0 0-5Z" fill="currentColor" fill-opacity="0.6"/>
-        </svg>
-        <span class="hero-battery-val" id="hero-battery-val">--%</span>
-        <span class="hero-battery-sep">&middot;</span>
-        <span class="hero-voltage-val" id="hero-voltage-val">--V</span>
-        <span class="hero-battery-sep">&middot;</span>
-        <span class="hero-mileage-val" id="hero-mileage-val"></span>
-      </div>
-
       <div class="car-visual" aria-hidden="true">
         <img id="car-photo" src="" alt="" />
+        <div class="vehicle-fallback">
+          <span class="fallback-body"></span>
+          <span class="fallback-handle"></span>
+          <span class="fallback-wheel front"></span>
+          <span class="fallback-wheel rear"></span>
+        </div>
+      </div>
+
+      <div class="hero-metrics" id="hero-battery">
+        <div class="metric-card battery-card">
+          <span class="metric-label">电池</span>
+          <div class="battery-meter" aria-hidden="true">
+            <span id="battery-fill-bar"></span>
+          </div>
+          <strong id="hero-battery-val">--%</strong>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">电压</span>
+          <strong id="hero-voltage-val">--V</strong>
+        </div>
+        <div class="metric-card">
+          <span class="metric-label">续航</span>
+          <strong id="hero-mileage-val">--</strong>
+        </div>
       </div>
 
       <div class="hero-status-row">
@@ -144,7 +158,11 @@
         <strong id="command-feedback-mark" class="sr-only">Idle</strong>
       </div>
 
-      <button class="connection-toggle" id="connection-toggle" type="button">连接设置 展开</button>
+      <button class="connection-toggle" id="connection-toggle" type="button">
+        <span>连接设置</span>
+        <strong>展开</strong>
+        <svg aria-hidden="true"><use href="#icon-chevron"></use></svg>
+      </button>
 
       <div class="connection-drawer" id="connection-drawer">
         <div class="tabs mode-switch" aria-label="控制模式">
@@ -162,11 +180,11 @@
             </div>
             <div class="cloud-login-form" id="cloud-login-form">
               <div class="form-row">
-              <input id="phone-input" class="form-input" type="tel" inputmode="tel" autocomplete="tel" maxlength="11" placeholder="手机号码" />
+                <input id="phone-input" class="form-input" type="tel" inputmode="tel" autocomplete="tel" maxlength="11" placeholder="手机号码" />
                 <button id="btn-get-code" class="btn" type="button">获取验证码</button>
               </div>
               <div class="form-row">
-              <input id="sms-input" class="form-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="短信验证码" />
+                <input id="sms-input" class="form-input" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="8" placeholder="短信验证码" />
                 <button id="btn-cloud-login" class="btn btn-primary" type="button">验证登录</button>
               </div>
             </div>

@@ -119,8 +119,8 @@ button {
 
 .hero-card {
   position: relative;
-  min-height: 236px;
-  padding: 20px;
+  min-height: 268px;
+  padding: 18px;
   color: #f9f3e4;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 24px;
@@ -148,7 +148,7 @@ button {
   justify-content: space-between;
   align-items: flex-start;
   gap: 16px;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
 }
 
 .hero-head h1 {
@@ -187,8 +187,8 @@ button {
 
 .car-visual {
   position: relative;
-  height: 104px;
-  margin: 4px 0 14px;
+  height: 92px;
+  margin: 0 0 14px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -205,6 +205,74 @@ button {
 
 .car-visual img[src]:not([src=""]) {
   opacity: 1;
+}
+
+.car-visual img[src]:not([src=""]) + .vehicle-fallback {
+  opacity: 0;
+}
+
+.vehicle-fallback {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.fallback-body,
+.fallback-handle,
+.fallback-wheel {
+  position: absolute;
+  display: block;
+}
+
+.fallback-body {
+  width: min(72%, 290px);
+  height: 28px;
+  bottom: 24px;
+  border-radius: 18px 26px 12px 12px;
+  background: linear-gradient(90deg, #fff8e8, #d9d0b8);
+}
+
+.fallback-handle {
+  width: 98px;
+  height: 58px;
+  bottom: 39px;
+  left: 30%;
+  border: 11px solid #fff8e8;
+  border-bottom: 0;
+  border-radius: 54px 54px 0 0;
+}
+
+.fallback-wheel {
+  width: 46px;
+  height: 46px;
+  bottom: 6px;
+  border: 7px solid rgba(249, 243, 228, 0.18);
+  border-radius: 50%;
+  background: #0f1d19;
+  box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.16);
+}
+
+.fallback-wheel::after {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: inherit;
+  background: var(--cyan);
+}
+
+.fallback-wheel.front {
+  left: 18%;
+}
+
+.fallback-wheel.rear {
+  right: 18%;
+}
+
+.fallback-wheel.rear::after {
+  background: var(--amber);
 }
 
 .sheet {
@@ -326,6 +394,20 @@ button {
   color: var(--red);
 }
 
+.ctrl-btn.red::before {
+  content: "长按";
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  padding: 3px 6px;
+  border-radius: 999px;
+  color: var(--red);
+  background: rgba(223, 74, 92, 0.1);
+  font-size: 0.62rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
 .ctrl-btn.yellow .icon {
   background: rgba(231, 144, 34, 0.16);
   color: var(--amber);
@@ -419,6 +501,31 @@ button {
   background: rgba(247, 240, 223, 0.82);
   font-weight: 900;
   box-shadow: 0 12px 28px rgba(27, 37, 31, 0.08);
+  display: grid;
+  grid-template-columns: 1fr auto auto;
+  align-items: center;
+  gap: 8px;
+  text-align: left;
+}
+
+.connection-toggle strong {
+  font-size: 0.82rem;
+  color: var(--muted);
+}
+
+.connection-toggle svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 160ms ease;
+}
+
+.connection-toggle.open svg {
+  transform: rotate(180deg);
 }
 
 .connection-drawer {
@@ -786,39 +893,60 @@ textarea#log {
 }
 
 
-.hero-battery {
-  display: flex;
-  align-items: center;
+.hero-metrics {
+  position: relative;
+  display: grid;
+  grid-template-columns: 1.15fr 0.9fr 0.9fr;
   gap: 8px;
-  margin-bottom: 6px;
-  color: rgba(249, 243, 228, 0.82);
 }
 
-.hero-battery-icon {
-  color: rgba(249, 243, 228, 0.7);
+.metric-card {
+  min-width: 0;
+  min-height: 66px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.07);
+  display: grid;
+  align-content: space-between;
+  gap: 6px;
 }
 
-.hero-battery-val {
-  font-size: 1.72rem;
-  font-weight: 800;
-  letter-spacing: -0.06em;
+.metric-label {
+  color: rgba(249, 243, 228, 0.58);
+  font-size: 0.73rem;
+  font-weight: 700;
+}
+
+.metric-card strong {
+  min-width: 0;
   color: #f9f3e4;
+  font-size: 1.05rem;
   line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.hero-battery-sep {
-  color: rgba(249, 243, 228, 0.3);
-  font-size: 1rem;
+.battery-card strong {
+  font-size: 1.26rem;
 }
 
-.hero-voltage-val {
-  color: rgba(249, 243, 228, 0.62);
-  font-size: 0.82rem;
+.battery-meter {
+  width: 100%;
+  height: 7px;
+  border-radius: 999px;
+  background: rgba(249, 243, 228, 0.18);
+  overflow: hidden;
 }
 
-.hero-mileage-val {
-  color: rgba(249, 243, 228, 0.62);
-  font-size: 0.82rem;
+.battery-meter span {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--cyan), #7ce4a3);
+  transition: width 220ms ease;
 }
 
 .hero-status-row {
@@ -859,7 +987,7 @@ textarea#log {
   .hero-card {
     min-height: auto;
     padding: 14px;
-    border-radius: 26px;
+    border-radius: 22px;
   }
 
   .hero-head {
@@ -881,8 +1009,49 @@ textarea#log {
   }
 
   .car-visual {
-    height: 80px;
-    margin: -2px 0 9px;
+    height: 82px;
+    margin: -2px 0 10px;
+  }
+
+  .fallback-body {
+    width: 78%;
+  }
+
+  .fallback-handle {
+    left: 28%;
+    width: 86px;
+    height: 52px;
+  }
+
+  .fallback-wheel {
+    width: 42px;
+    height: 42px;
+  }
+
+  .fallback-wheel.front {
+    left: 15%;
+  }
+
+  .fallback-wheel.rear {
+    right: 15%;
+  }
+
+  .hero-metrics {
+    gap: 6px;
+  }
+
+  .metric-card {
+    min-height: 58px;
+    padding: 9px;
+    border-radius: 14px;
+  }
+
+  .metric-card strong {
+    font-size: 0.92rem;
+  }
+
+  .battery-card strong {
+    font-size: 1.08rem;
   }
 
   .sheet {

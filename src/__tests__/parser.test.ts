@@ -1,7 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { parseResponse } from '../ble/parser'
 import { aesEcbEncrypt } from '../crypto/aes'
-import { hexToBytes } from '../utils/hex'
 
 const TEST_KEY = '3A60432A5C01211F291E0F4E0C132825'
 
