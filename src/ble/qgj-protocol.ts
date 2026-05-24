@@ -1,4 +1,3 @@
-import { bytesToHex } from '../utils/hex'
 
 export function buildQgjLoginFrame(password: string, userId: number): Uint8Array {
   const pwdNum = parseInt(password, 10)

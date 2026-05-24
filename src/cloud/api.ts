@@ -1,4 +1,5 @@
 import type { CarInfo, CloudCmd, ProxyResponse } from './types'
+import { persistToken } from './token'
 
 const PROXY_BASE = 'https://tailg-proxy.ch6vip.workers.dev'
 const API_V1 = 'https://www.tailgdd.com/v1/api/'
@@ -21,19 +22,20 @@ async function proxyFetch(url: string, method: string, headers: Record<string, s
   const res: ProxyResponse = await resp.json()
   const newToken = res.headers['authorization'] || res.headers['Authorization']
   if (newToken) {
-    localStorage.setItem('cloudToken', newToken)
-    fetch('/api/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token: newToken }),
-    }).catch(() => {})
+    persistToken(newToken)
   }
   return res
 }
 
-function isSuccess(data: any): boolean {
+interface ApiResponse {
+  code?: number | string
+  msg?: string
+  data?: unknown
+}
+
+function isSuccess(data: ApiResponse): boolean {
   const code = String(data.code)
-  return code === '200' || code === '0' || (data.msg && data.msg.includes('成功'))
+  return code === '200' || code === '0' || (data.msg?.includes('成功') ?? false)
 }
 
 export async function getSmsCode(phone: string): Promise<void> {
@@ -102,7 +104,8 @@ export async function checkToken(token: string): Promise<boolean> {
       JSON.stringify({ phoneMode: 'web' })
     )
     return res.status === 200 && !res.body.includes('"401"')
-  } catch {
+  } catch (e: unknown) {
+    console.debug('[Cloud] token check failed:', e instanceof Error ? e.message : e)
     return false
   }
 }
@@ -116,19 +119,17 @@ export interface SavedAccount {
 export function getSavedAccounts(): SavedAccount[] {
   try {
     return JSON.parse(localStorage.getItem('accounts') || '[]')
-  } catch { return [] }
+  } catch (e: unknown) {
+    console.debug('[Cloud] failed to parse saved accounts:', e instanceof Error ? e.message : e)
+    return []
+  }
 }
 
 export function saveAccount(phone: string, token: string) {
   const accounts = getSavedAccounts().filter(a => a.phone !== phone)
   accounts.unshift({ phone, token, savedAt: Date.now() })
   localStorage.setItem('accounts', JSON.stringify(accounts))
-  localStorage.setItem('cloudToken', token)
-  fetch('/api/token', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ token }),
-  }).catch(() => {})
+  persistToken(token)
 }
 
 export function removeAccount(phone: string) {
