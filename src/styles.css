@@ -52,10 +52,8 @@ button {
 
 .app {
   width: min(100%, 430px);
-  min-height: 100vh;
-  min-height: 100dvh;
   margin: 0 auto;
-  padding: 18px 14px 104px;
+  padding: 18px 14px 32px;
   overflow-x: hidden;
   overflow-y: visible;
 }
@@ -837,7 +835,7 @@ textarea#log {
 
 @media (max-width: 520px) {
   .app {
-    padding: 12px 10px 96px;
+    padding: 12px 10px 24px;
   }
 
   .topbar {
