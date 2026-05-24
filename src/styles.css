@@ -70,7 +70,6 @@ button {
 
 .brand small,
 .hero-head small,
-.status-chip small,
 .label,
 .section-title small,
 .panel-title small {
@@ -201,27 +200,6 @@ button {
 
 .car-visual img[src]:not([src=""]) {
   opacity: 1;
-}
-
-.hero-grid {
-  position: relative;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 9px;
-}
-
-.status-chip {
-  min-height: 72px;
-  padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 20px;
-  background: rgba(255, 255, 255, 0.1);
-}
-
-.status-chip strong {
-  display: block;
-  margin-top: 5px;
-  font-size: 1rem;
 }
 
 .sheet {
@@ -887,6 +865,96 @@ textarea#log {
   }
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.hero-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.online-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(249, 243, 228, 0.62);
+  white-space: nowrap;
+}
+
+.online-badge.is-online {
+  background: rgba(20, 165, 111, 0.22);
+  color: #5ef5c0;
+}
+
+.hero-battery {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+  color: rgba(249, 243, 228, 0.82);
+}
+
+.hero-battery-icon {
+  color: rgba(249, 243, 228, 0.7);
+}
+
+.hero-battery-val {
+  font-size: 1.72rem;
+  font-weight: 800;
+  letter-spacing: -0.06em;
+  color: #f9f3e4;
+  line-height: 1;
+}
+
+.hero-battery-sep {
+  color: rgba(249, 243, 228, 0.3);
+  font-size: 1rem;
+}
+
+.hero-mileage-val {
+  color: rgba(249, 243, 228, 0.62);
+  font-size: 0.82rem;
+}
+
+.hero-status-row {
+  display: flex;
+  justify-content: center;
+  margin-top: 6px;
+}
+
+.hero-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.08);
+  color: rgba(249, 243, 228, 0.88);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.hero-status-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: rgba(249, 243, 228, 0.3);
+}
+
 @media (max-width: 520px) {
   .app {
     padding: 12px 10px 96px;
@@ -923,16 +991,6 @@ textarea#log {
   .car-visual {
     height: 80px;
     margin: -2px 0 9px;
-  }
-
-  .status-chip {
-    min-height: 52px;
-    padding: 8px;
-    border-radius: 16px;
-  }
-
-  .status-chip strong {
-    font-size: 0.88rem;
   }
 
   .dash-box {

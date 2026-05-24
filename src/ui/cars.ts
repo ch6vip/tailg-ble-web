@@ -2,9 +2,9 @@ import { $ } from '../dom'
 import type { CarInfo } from '../cloud/types'
 
 function buildCarInfoText(car: CarInfo): string {
-  const defence = car.defenceStatus === '1' ? '已设防' : '已解防'
-  const acc = car.acc === '1' ? '已上电' : '已断电'
-  return `IMEI: ${car.imei} | ${defence} | ${acc} | 电量: ${car.electricQuantity || '-'}%`
+  const defence = car.defenceStatus === 1 ? '已设防' : '已解防'
+  const acc = car.acc === 1 ? '已上电' : '已断电'
+  return `IMEI: ${car.imei} | ${defence} | ${acc} | 电量: ${car.electricQuantity ?? '-'}%`
 }
 
 export function renderCarList(cars: CarInfo[], onSelect: (car: CarInfo) => void) {
@@ -23,7 +23,7 @@ export function renderCarList(cars: CarInfo[], onSelect: (car: CarInfo) => void)
     div.dataset.imei = car.imei
     const name = document.createElement('div')
     name.className = 'car-name'
-    name.textContent = car.carName || car.btname || car.imei
+    name.textContent = car.carNickName || car.carName || car.btname || car.imei
     const info = document.createElement('div')
     info.className = 'car-info'
     info.textContent = buildCarInfoText(car)
@@ -35,13 +35,39 @@ export function renderCarList(cars: CarInfo[], onSelect: (car: CarInfo) => void)
 
 export function selectCarUI(car: CarInfo) {
   const title = document.getElementById('vehicle-title')
-  if (title) title.textContent = car.carName || car.btname || '台铃智控车'
+  if (title) title.textContent = car.carNickName || car.carName || car.btname || '台铃智控车'
   document.querySelectorAll('.car-item').forEach(el => el.classList.remove('selected'))
   document.querySelectorAll('.car-item').forEach(el => {
     if ((el as HTMLElement).dataset.imei === car.imei) el.classList.add('selected')
   })
-  $('lock-state').textContent = car.defenceStatus === '1' ? '已设防' : '已解防'
-  $('power-state').textContent = car.acc === '1' ? '已上电' : '已断电'
-  $('battery-val').textContent = car.electricQuantity ? `${car.electricQuantity}%` : '-'
-  $('voltage-val').textContent = car.voltage ? `${car.voltage}V` : '-'
+  $('lock-state').textContent = car.defenceStatus === 1 ? '已设防' : '已解防'
+  $('power-state').textContent = car.acc === 1 ? '已上电' : '已断电'
+  $('battery-val').textContent = car.electricQuantity != null ? `${car.electricQuantity}%` : '-'
+  $('voltage-val').textContent = car.voltage != null ? `${car.voltage}V` : '-'
+
+  const badge = document.getElementById('online-badge')
+  if (badge) {
+    badge.textContent = car.online ? '在线' : '离线'
+    badge.classList.toggle('is-online', car.online)
+  }
+
+  const heroBatteryVal = document.getElementById('hero-battery-val')
+  if (heroBatteryVal) {
+    heroBatteryVal.textContent = car.electricQuantity != null ? `${car.electricQuantity}%` : '--%'
+  }
+  const fillBar = document.getElementById('battery-fill-bar')
+  if (fillBar && car.electricQuantity != null) {
+    const pct = Math.min(100, Math.max(0, Number(car.electricQuantity)))
+    fillBar.setAttribute('width', String(Math.round(pct * 0.2)))
+  }
+
+  const heroMileage = document.getElementById('hero-mileage-val')
+  if (heroMileage) {
+    heroMileage.textContent = car.mileage != null ? `预估 ${car.mileage} km` : ''
+  }
+
+  const defenceText = document.getElementById('hero-defence-text')
+  const powerText = document.getElementById('hero-power-text')
+  if (defenceText) defenceText.textContent = car.defenceStatus === 1 ? '已设防' : '已解防'
+  if (powerText) powerText.textContent = car.acc === 1 ? '已上电' : '已断电'
 }

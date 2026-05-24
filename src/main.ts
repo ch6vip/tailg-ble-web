@@ -164,8 +164,10 @@ function setCommandBusy(isBusy: boolean, name = '') {
 function syncSummary() {
   const lockText = $('lock-state').textContent ?? '-'
   const powerText = $('power-state').textContent ?? '-'
-  document.querySelectorAll('.mirror-lock').forEach((el) => { el.textContent = lockText })
-  document.querySelectorAll('.mirror-power').forEach((el) => { el.textContent = powerText })
+  const defenceEl = document.getElementById('hero-defence-text')
+  const powerEl = document.getElementById('hero-power-text')
+  if (defenceEl) defenceEl.textContent = lockText
+  if (powerEl) powerEl.textContent = powerText
 }
 
 function setConnectionDrawer(open: boolean) {
@@ -197,6 +199,12 @@ function updateState() {
     }
     stateEl.textContent = stateMap[conn.state]
     stateEl.className = `state-${conn.state}`
+  }
+
+  const badge = document.getElementById('online-badge')
+  if (badge && !selectedCar) {
+    badge.textContent = '离线'
+    badge.classList.remove('is-online')
   }
 
   $('device-name').textContent = conn.deviceName || '-'
@@ -372,10 +380,8 @@ function selectCar(car: CarInfo) {
   selectCarUI(car)
   const photo = document.getElementById('car-photo') as HTMLImageElement | null
   if (photo && car.carPhoto) photo.src = car.carPhoto
-  const title = document.getElementById('vehicle-title')
-  if (title) title.textContent = car.carNickName || car.carName || '台铃智控车'
   syncSummary()
-  log(`选中车辆: ${car.carName || car.imei} (指令IMEI: ${getCommandImei(car)}, modelType: ${car.modelType})`)
+  log(`选中车辆: ${car.carNickName || car.carName || car.imei} (指令IMEI: ${getCommandImei(car)}, modelType: ${car.modelType})`)
   updateState()
 }
 

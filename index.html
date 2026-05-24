@@ -41,7 +41,10 @@
       <div class="hero-head">
         <div>
           <small>当前车辆</small>
-          <h1 id="vehicle-title">台铃智控车</h1>
+          <div class="hero-title-row">
+            <h1 id="vehicle-title">台铃智控车</h1>
+            <span class="online-badge" id="online-badge">离线</span>
+          </div>
         </div>
         <div class="tabs mode-switch" aria-label="控制模式">
           <button class="tab active" id="tab-cloud" type="button">云端</button>
@@ -49,23 +52,33 @@
         </div>
       </div>
 
+      <div class="hero-battery" id="hero-battery">
+        <svg class="hero-battery-icon" width="28" height="14" viewBox="0 0 28 14" fill="none" aria-hidden="true">
+          <rect x="0.5" y="0.5" width="24" height="13" rx="2.5" stroke="currentColor" stroke-opacity="0.6"/>
+          <rect id="battery-fill-bar" x="2" y="2" width="0" height="10" rx="1.5" fill="currentColor"/>
+          <path d="M25.5 4.5v5a2 2 0 0 0 0-5Z" fill="currentColor" fill-opacity="0.6"/>
+        </svg>
+        <span class="hero-battery-val" id="hero-battery-val">--%</span>
+        <span class="hero-battery-sep">&middot;</span>
+        <span class="hero-mileage-val" id="hero-mileage-val"></span>
+      </div>
+
       <div class="car-visual" aria-hidden="true">
         <img id="car-photo" src="" alt="" />
       </div>
 
-      <div class="hero-grid">
-        <div class="status-chip">
-          <small>安防状态</small>
-          <strong id="lock-state">-</strong>
-        </div>
-        <div class="status-chip">
-          <small>电门引擎</small>
-          <strong id="power-state">-</strong>
-        </div>
-        <div class="status-chip">
-          <small>通信链路</small>
-          <strong id="conn-state" class="state-disconnected">未连接</strong>
-        </div>
+      <div class="hero-status-row">
+        <span class="hero-status-pill" id="hero-status-pill">
+          <span id="hero-defence-text">--</span>
+          <span class="hero-status-dot"></span>
+          <span id="hero-power-text">--</span>
+        </span>
+      </div>
+
+      <div class="sr-only" aria-hidden="true">
+        <strong id="lock-state">-</strong>
+        <strong id="power-state">-</strong>
+        <strong id="conn-state" class="state-disconnected">未连接</strong>
       </div>
     </section>
 
@@ -80,14 +93,6 @@
           <div class="label">实时电压</div>
           <div class="val" id="voltage-val">--</div>
           <small class="metric-hint">等待车辆回传</small>
-        </div>
-        <div class="dash-box dash-wide sr-state">
-          <div class="label">安防状态</div>
-          <div class="val mirror-lock">-</div>
-        </div>
-        <div class="dash-box dash-wide sr-state">
-          <div class="label">电门引擎</div>
-          <div class="val mirror-power">-</div>
         </div>
       </div>
 

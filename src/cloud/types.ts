@@ -6,16 +6,17 @@ export interface CarInfo {
   carNickName: string
   carPhoto: string
   frame: string
-  defenceStatus: '0' | '1'
-  acc: '0' | '1'
-  electricQuantity: string
-  voltage: string
-  online: string
+  defenceStatus: number
+  acc: number
+  electricQuantity: number
+  voltage: number
+  online: boolean
   btname: string
   btmac: string
   longitude: string
   latitude: string
   modelType: number
+  mileage?: number
 }
 
 const GPS_MODEL_TYPES = new Set([3, 8, 1501, 1601, 1701])
