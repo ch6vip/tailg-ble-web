@@ -177,14 +177,27 @@ function setConnectionDrawer(open: boolean) {
 
 function updateState() {
   const stateEl = $('conn-state')
-  const stateMap = {
-    disconnected: '未连接',
-    connecting: '连接中...',
-    connected: '已连接',
-    authenticated: '已认证',
+  if (activeChannel === 'cloud') {
+    if (cloudToken && selectedCar) {
+      stateEl.textContent = '云端在线'
+      stateEl.className = 'state-authenticated'
+    } else if (cloudToken) {
+      stateEl.textContent = '云端待选车'
+      stateEl.className = 'state-connected'
+    } else {
+      stateEl.textContent = '未登录'
+      stateEl.className = 'state-disconnected'
+    }
+  } else {
+    const stateMap = {
+      disconnected: '未连接',
+      connecting: '连接中...',
+      connected: '已连接',
+      authenticated: '已认证',
+    }
+    stateEl.textContent = stateMap[conn.state]
+    stateEl.className = `state-${conn.state}`
   }
-  stateEl.textContent = stateMap[conn.state]
-  stateEl.className = `state-${conn.state}`
 
   $('device-name').textContent = conn.deviceName || '-'
   $('token-val').textContent = conn.token || '-'
