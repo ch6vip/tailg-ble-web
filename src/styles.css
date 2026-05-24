@@ -30,7 +30,7 @@ body {
   color: var(--ink);
   font-family: Aptos, "Segoe UI", sans-serif;
   background:
-    linear-gradient(180deg, #07100e 0%, #10211d 45%, #ece3d1 45.1%, #f7f0df 100%);
+    linear-gradient(180deg, #07100e 0, #10211d 360px, #ece3d1 560px, #f7f0df 100%);
 }
 
 button,
@@ -56,6 +56,7 @@ button {
 }
 
 .app {
+  position: relative;
   width: min(100%, 430px);
   margin: 0 auto;
   padding: 18px 14px 32px;
@@ -151,11 +152,22 @@ button {
   margin-bottom: 10px;
 }
 
+.hero-head > div {
+  min-width: 0;
+  width: 100%;
+}
+
 .hero-head h1 {
   margin-top: 4px;
   font-size: 2rem;
-  line-height: 0.96;
-  letter-spacing: -0.045em;
+  line-height: 1.02;
+  letter-spacing: -0.035em;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .mode-switch {
@@ -187,7 +199,7 @@ button {
 
 .car-visual {
   position: relative;
-  height: 92px;
+  height: 104px;
   margin: 0 0 14px;
   display: flex;
   align-items: center;
@@ -196,7 +208,7 @@ button {
 
 .car-visual img {
   max-height: 100%;
-  max-width: 80%;
+  max-width: 88%;
   object-fit: contain;
   filter: drop-shadow(0 12px 32px rgba(0, 0, 0, 0.4));
   opacity: 0;
@@ -276,7 +288,22 @@ button {
 }
 
 .sheet {
+  position: relative;
+  z-index: 0;
   padding: 20px 0 0;
+}
+
+.sheet::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  top: 0;
+  bottom: -48px;
+  left: -14px;
+  right: -14px;
+  border-radius: 28px 28px 0 0;
+  background: linear-gradient(180deg, rgba(236, 227, 209, 0.96), #f7f0df 58%, #f7f0df 100%);
+  box-shadow: 0 -18px 44px rgba(7, 16, 14, 0.18);
 }
 
 .section-title,
@@ -298,6 +325,11 @@ button {
 .section-title > small {
   color: var(--muted);
   font-size: 0.8rem;
+}
+
+.section-title > small {
+  font-weight: 800;
+  opacity: 0.85;
 }
 
 .card {
@@ -529,21 +561,21 @@ button {
 }
 
 .connection-drawer {
-  display: grid;
-  grid-template-rows: 0fr;
+  max-height: 0;
+  overflow: hidden;
   opacity: 0;
   transform: translateY(-6px);
-  transition: grid-template-rows 220ms ease, opacity 220ms ease, transform 220ms ease;
+  transition: max-height 240ms ease, opacity 180ms ease, transform 180ms ease;
 }
 
 .connection-drawer.open {
-  grid-template-rows: 1fr;
+  max-height: 720px;
   opacity: 1;
   transform: translateY(0);
 }
 
 .connection-drawer > * {
-  overflow: hidden;
+  overflow: visible;
 }
 
 .connect-panel {
