@@ -337,6 +337,9 @@ async function loadCars() {
     log('获取车辆列表...')
     const cars = await getCarStatus(cloudToken)
     log(`找到 ${cars.length} 辆车`)
+    if (cars.length > 0) {
+      log(`[DEBUG] 车辆原始字段: ${JSON.stringify(cars[0])}`)
+    }
     renderCarList(cars, selectCar)
     if (cars.length === 1) selectCar(cars[0])
   } catch (e: unknown) {
