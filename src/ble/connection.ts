@@ -249,14 +249,17 @@ export class TailgBleConnection {
 
   private startQgjHeartbeat() {
     this.stopQgjHeartbeat()
-    this._qgjHeartbeatTimer = window.setInterval(() => {
+    const tick = () => {
       if (this._state !== 'authenticated' || !this._chars.has('feb1')) {
         this.stopQgjHeartbeat()
         return
       }
       const frame = buildQgjLoginFrame('0', 0)
       this.writeRaw('feb1', bytesToHex(frame)).catch(() => this.stopQgjHeartbeat())
-    }, QGJ_HEARTBEAT_INTERVAL_MS)
+    }
+    this._qgjHeartbeatTimer = window.setInterval(tick, QGJ_HEARTBEAT_INTERVAL_MS)
+    window.setTimeout(tick, 1500)
+  }
   }
 
   private stopQgjHeartbeat() {
@@ -306,11 +309,13 @@ export class TailgBleConnection {
           try {
             await c.startNotifications()
             const charUuid = c.uuid
+            const shortId = charUuid.substring(4, 8)
             c.addEventListener('characteristicvaluechanged', (ev) => {
               const val = (ev.target as BluetoothRemoteGATTCharacteristic).value
               if (!val) return
               const raw = new Uint8Array(val.buffer)
-              this.log(`← [${charUuid.substring(4, 8)}] ${bytesToHex(raw)}`)
+              this.log(`← [${shortId}] ${bytesToHex(raw)}`)
+              if (shortId === 'feb2') this.handleQgjNotify(raw)
             })
             this.log(`    → 已订阅通知`)
           } catch {
