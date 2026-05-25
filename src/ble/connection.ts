@@ -288,6 +288,7 @@ export class TailgBleConnection {
       this.log('未找到可读的 feb3，跳过 QGJ 心跳')
       return
     }
+    let failures = 0
     const tick = async () => {
       if (this._state !== 'authenticated') {
         this.stopQgjHeartbeat()
@@ -295,9 +296,14 @@ export class TailgBleConnection {
       }
       try {
         await feb3.readValue()
+        failures = 0
       } catch (e: unknown) {
-        console.debug('[QGJ heartbeat] read feb3 failed:', e instanceof Error ? e.message : e)
-        this.stopQgjHeartbeat()
+        failures++
+        console.debug(`[QGJ heartbeat] read feb3 fail #${failures}:`, e instanceof Error ? e.message : e)
+        if (failures >= 3) {
+          this.log('feb3 心跳连续失败，已停止')
+          this.stopQgjHeartbeat()
+        }
       }
     }
     this._qgjHeartbeatTimer = window.setInterval(tick, QGJ_HEARTBEAT_INTERVAL_MS)
