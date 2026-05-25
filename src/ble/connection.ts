@@ -6,11 +6,13 @@ import {
 } from '../types'
 import { buildTokenRequest } from './protocol'
 import { parseResponse } from './parser'
-import { parseQgjResponse } from './qgj-protocol'
+import { buildQgjLoginFrame, parseQgjResponse } from './qgj-protocol'
 import { bytesToHex } from '../utils/hex'
 import type { ParsedResponse } from '../types'
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'authenticated'
+
+const QGJ_HEARTBEAT_INTERVAL_MS = 5000
 
 export class TailgBleConnection {
   private device: BluetoothDevice | null = null
@@ -25,6 +27,7 @@ export class TailgBleConnection {
   private _reconnectAttempts = 0
   private _maxReconnectAttempts = 3
   private _reconnecting = false
+  private _qgjHeartbeatTimer: number | undefined
 
   onStateChange: ((state: ConnectionState) => void) | null = null
   onResponse: ((resp: ParsedResponse) => void) | null = null
@@ -44,6 +47,7 @@ export class TailgBleConnection {
 
   private setState(s: ConnectionState) {
     this._state = s
+    if (s === 'disconnected') this.stopQgjHeartbeat()
     this.onStateChange?.(s)
   }
 
@@ -235,10 +239,30 @@ export class TailgBleConnection {
   private handleQgjNotify(raw: Uint8Array) {
     const parsed = parseQgjResponse(raw)
     if (!parsed) return
-    if (parsed.cmdId === 0x1001 && parsed.success) {
+    if (parsed.cmdId === 0x1001 && parsed.success && this._state !== 'authenticated') {
       this._token = 'QGJ_LOGIN_OK'
       this.setState('authenticated')
       this.log('QGJ 登录成功，控车通道已就绪')
+      this.startQgjHeartbeat()
+    }
+  }
+
+  private startQgjHeartbeat() {
+    this.stopQgjHeartbeat()
+    this._qgjHeartbeatTimer = window.setInterval(() => {
+      if (this._state !== 'authenticated' || !this._chars.has('feb1')) {
+        this.stopQgjHeartbeat()
+        return
+      }
+      const frame = buildQgjLoginFrame('0', 0)
+      this.writeRaw('feb1', bytesToHex(frame)).catch(() => this.stopQgjHeartbeat())
+    }, QGJ_HEARTBEAT_INTERVAL_MS)
+  }
+
+  private stopQgjHeartbeat() {
+    if (this._qgjHeartbeatTimer != null) {
+      window.clearInterval(this._qgjHeartbeatTimer)
+      this._qgjHeartbeatTimer = undefined
     }
   }
 
