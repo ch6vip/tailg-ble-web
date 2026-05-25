@@ -260,7 +260,6 @@ export class TailgBleConnection {
     this._qgjHeartbeatTimer = window.setInterval(tick, QGJ_HEARTBEAT_INTERVAL_MS)
     window.setTimeout(tick, 1500)
   }
-  }
 
   private stopQgjHeartbeat() {
     if (this._qgjHeartbeatTimer != null) {
