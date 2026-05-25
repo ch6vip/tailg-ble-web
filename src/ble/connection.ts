@@ -202,7 +202,21 @@ export class TailgBleConnection {
     if (this._serviceType === 'fee5') {
       await this.sendTokenRequest()
     } else if (this._serviceType === 'fcc0') {
-      this.log('QGJ 协议：请点击「QGJ 登录」完成认证后再发指令')
+      await this.sendQgjLogin()
+    }
+  }
+
+  private async sendQgjLogin(): Promise<void> {
+    if (!this._chars.has('feb1')) {
+      this.log('未发现 feb1，无法发送 QGJ 登录')
+      return
+    }
+    const frame = buildQgjLoginFrame('0', 0)
+    this.log(`→ QGJ 自动登录: ${bytesToHex(frame)}`)
+    try {
+      await this.writeRaw('feb1', bytesToHex(frame))
+    } catch (e: unknown) {
+      this.log(`QGJ 自动登录写入失败: ${e instanceof Error ? e.message : String(e)}`)
     }
   }
 
