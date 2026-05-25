@@ -1,18 +1,19 @@
 import { TailgBleConnection } from './ble/connection'
 import { buildQgjLoginFrame } from './ble/qgj-protocol'
 import { bytesToHex } from './utils/hex'
-import { type CommandCode, type ParsedResponse } from './types'
+import { type ParsedResponse } from './types'
 import { getSmsCode, login, getCarStatus } from './cloud/api'
 import { persistToken } from './cloud/token'
 import { getCommandImei, type CarInfo } from './cloud/types'
 import { $, errMsg, log } from './dom'
 import { initLock } from './ui/lock'
 import { renderCarList, selectCarUI } from './ui/cars'
-import { setFeedback, shouldRenderReadyFeedback, resetFeedbackState, getFeedbackState } from './ui/feedback'
+import { bindCommandButtons } from './ui/command-buttons'
+import { setFeedback, shouldRenderReadyFeedback } from './ui/feedback'
 import { getState, setState, subscribe } from './state'
 import {
-  CMD_NAMES, DANGEROUS_COMMANDS, getCommandGroup, getBusyCommand,
-  getSelectedKey, setCommandBusy, executeCommand,
+  CMD_NAMES, getCommandGroup, getBusyCommand,
+  getSelectedKey, setCommandBusy,
 } from './commands'
 
 let conn: TailgBleConnection
@@ -152,8 +153,6 @@ function syncSummary() {
   if (powerEl) powerEl.textContent = powerState
 }
 
-// PLACEHOLDER_MAIN_PART2
-
 function setAdvancedPanel(open: boolean) {
   const panel = document.getElementById('advanced-panel')
   const trigger = document.getElementById('drawer-debug-link')
@@ -249,57 +248,6 @@ function selectCar(car: CarInfo) {
   log(`选中车辆: ${car.carNickName || car.carName || car.imei} (指令IMEI: ${getCommandImei(car)}, modelType: ${car.modelType})`)
 }
 
-function armDangerousCommand(btn: HTMLButtonElement, cmd: CommandCode, run: () => Promise<void>) {
-  let timer: number | undefined
-  let armed = false
-  let pointerId: number | undefined
-  const originalText = btn.querySelector('.text')?.textContent ?? ''
-
-  const reset = () => {
-    if (timer != null) window.clearTimeout(timer)
-    timer = undefined
-    armed = false
-    if (pointerId != null && btn.hasPointerCapture?.(pointerId)) {
-      btn.releasePointerCapture(pointerId)
-    }
-    pointerId = undefined
-    btn.classList.remove('is-holding')
-    const text = btn.querySelector('.text')
-    if (text) text.textContent = originalText
-    if (getFeedbackState() === 'Hold') {
-      resetFeedbackState()
-      updateButtons()
-    }
-  }
-
-  const start = (event: PointerEvent) => {
-    if (btn.disabled || getState().controlBusy) return
-    event.preventDefault()
-    pointerId = event.pointerId
-    btn.setPointerCapture?.(event.pointerId)
-    armed = true
-    btn.classList.add('is-holding')
-    const text = btn.querySelector('.text')
-    if (text) text.textContent = '继续按住'
-    setFeedback(`长按确认${CMD_NAMES[cmd]}`, '保持按住 1 秒执行危险动作，松开取消。', 'Hold')
-    timer = window.setTimeout(async () => {
-      if (!armed) return
-      reset()
-      await run()
-    }, 1000)
-  }
-
-  btn.addEventListener('pointerdown', start)
-  btn.addEventListener('pointerup', reset)
-  btn.addEventListener('pointerleave', reset)
-  btn.addEventListener('pointercancel', reset)
-  btn.addEventListener('lostpointercapture', reset)
-  btn.addEventListener('contextmenu', (event) => event.preventDefault())
-  window.addEventListener('blur', reset)
-}
-
-// PLACEHOLDER_MAIN_INIT
-
 function init() {
   initLock()
   conn = new TailgBleConnection(getSelectedKey())
@@ -366,26 +314,7 @@ function init() {
     log(`切换型号密钥: ${($('model-select') as HTMLSelectElement).value}`)
   })
 
-  document.querySelectorAll<HTMLButtonElement>('.cmd-btn').forEach((btn) => {
-    const run = async () => {
-      try {
-        const cmd = btn.dataset.cmd as CommandCode
-        if (!cmd) return
-        await executeCommand(conn, cmd)
-      } catch (e: unknown) {
-        setCommandBusy(false, btn.dataset.cmd ?? '')
-        const msg = errMsg(e)
-        log(`指令执行异常: ${msg}`)
-        setFeedback('指令执行异常', msg || '请检查连接后重试。', 'Fail')
-      }
-    }
-    const cmd = btn.dataset.cmd as CommandCode
-    if (DANGEROUS_COMMANDS.has(cmd)) {
-      armDangerousCommand(btn, cmd, run)
-    } else {
-      btn.addEventListener('click', run)
-    }
-  })
+  bindCommandButtons(conn, updateButtons)
 
   $('btn-copy-log').addEventListener('click', async () => {
     const el = $('log') as HTMLTextAreaElement
@@ -418,7 +347,7 @@ function init() {
   $('btn-qgj-login').addEventListener('click', async () => {
     const loginFrame = buildQgjLoginFrame('000000000', 0)
     log(`尝试 QGJ 登录 (pwd=0, uid=0): ${bytesToHex(loginFrame)}`)
-    await conn.writeRaw('fe02', bytesToHex(loginFrame))
+    await conn.writeRaw('feb1', bytesToHex(loginFrame))
   })
 
   $('btn-get-code').addEventListener('click', async () => {

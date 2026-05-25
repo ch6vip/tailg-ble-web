@@ -1,3 +1,4 @@
+import type { CommandCode } from '../types'
 
 export function buildQgjLoginFrame(password: string, userId: number): Uint8Array {
   const pwdNum = parseInt(password, 10)
@@ -44,11 +45,20 @@ export function parseQgjResponse(data: Uint8Array): { cmdId: number; payload: Ui
 
 export const QGJ_CMD = {
   ECU_LOGIN: 0x1001,
-  ECU_BIND: 0x1002,
-  LOCK: 0x2001,
-  UNLOCK: 0x2002,
-  FIND: 0x2003,
-  START: 0x2004,
-  STOP: 0x2005,
-  OPEN_SEAT: 0x2006,
+  ECU_SET_STATUS: 0x1002,
 } as const
+
+const NOMAL_OPCODE: Partial<Record<CommandCode, number>> = {
+  '01': 0x02, // DeviceSetSafe (lock)
+  '02': 0x01, // DeviceOutSafe (unlock)
+  '05': 0x07, // DeviceOpenSeat
+  '06': 0x03, // DeviceOpenEleDoor (power on)
+  '07': 0x04, // DeviceCloseEleDoor (power off)
+  '08': 0x08, // DeviceFindBike
+}
+
+export function buildQgjControlFrame(cmd: CommandCode): Uint8Array | null {
+  const opCode = NOMAL_OPCODE[cmd]
+  if (opCode == null) return null
+  return buildQgjCommand(QGJ_CMD.ECU_SET_STATUS, new Uint8Array([opCode]))
+}

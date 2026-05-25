@@ -1,5 +1,6 @@
 import { TailgBleConnection } from './ble/connection'
 import { buildCommand } from './ble/protocol'
+import { buildQgjControlFrame } from './ble/qgj-protocol'
 import { bytesToHex } from './utils/hex'
 import { AES_KEYS, type CommandCode, type ModelType } from './types'
 import { sendCommand } from './cloud/api'
@@ -67,6 +68,10 @@ export function setCommandBusy(isBusy: boolean, cmd = '') {
 }
 
 export async function sendBleCmd(conn: TailgBleConnection, cmd: CommandCode) {
+  if (conn.serviceType === 'fcc0') {
+    await sendQgjCmd(conn, cmd)
+    return
+  }
   const name = CMD_NAMES[cmd] ?? cmd
   const data = buildCommand(getSelectedKey(), cmd, conn.token)
   log(`→ 发送指令 [${cmd}]: ${bytesToHex(data)}`)
@@ -79,6 +84,27 @@ export async function sendBleCmd(conn: TailgBleConnection, cmd: CommandCode) {
     setCommandBusy(false, cmd)
     setFeedback('蓝牙指令发送失败', msg, 'Fail')
     log(`蓝牙指令发送失败: ${msg}`)
+  }
+}
+
+async function sendQgjCmd(conn: TailgBleConnection, cmd: CommandCode) {
+  const name = CMD_NAMES[cmd] ?? cmd
+  const frame = buildQgjControlFrame(cmd)
+  if (!frame) {
+    log(`QGJ 不支持指令: ${cmd}`)
+    setFeedback(`${name}指令不支持`, 'QGJ 协议下该指令未映射，请改走云端通道。', 'Fail')
+    return
+  }
+  log(`→ [QGJ] ${name} [${cmd}]: ${bytesToHex(frame)}`)
+  setCommandBusy(true, cmd)
+  setFeedback('QGJ 指令发送中', `${name}已写入 feb1，等待 feb2 回执。`, 'TX')
+  try {
+    await conn.writeRaw('feb1', bytesToHex(frame))
+  } catch (e: unknown) {
+    const msg = errMsg(e)
+    setCommandBusy(false, cmd)
+    setFeedback('QGJ 指令写入失败', msg, 'Fail')
+    log(`QGJ 指令写入失败: ${msg}`)
   }
 }
 

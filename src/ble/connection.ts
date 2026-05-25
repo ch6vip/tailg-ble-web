@@ -6,6 +6,7 @@ import {
 } from '../types'
 import { buildTokenRequest } from './protocol'
 import { parseResponse } from './parser'
+import { parseQgjResponse } from './qgj-protocol'
 import { bytesToHex } from '../utils/hex'
 import type { ParsedResponse } from '../types'
 
@@ -187,10 +188,58 @@ export class TailgBleConnection {
     await this.notifyChar.startNotifications()
     this.notifyChar.addEventListener('characteristicvaluechanged', this.handleNotify.bind(this))
 
+    if (this._serviceType === 'fcc0') {
+      await this.bindQgjAuxChannel()
+    }
+
     this.setState('connected')
     this.log('GATT 连接成功，已订阅通知')
 
-    await this.sendTokenRequest()
+    if (this._serviceType === 'fee5') {
+      await this.sendTokenRequest()
+    } else if (this._serviceType === 'fcc0') {
+      this.log('QGJ 协议：请点击「QGJ 登录」完成认证后再发指令')
+    }
+  }
+
+  private async bindQgjAuxChannel(): Promise<void> {
+    if (!this.server) return
+    try {
+      const feb0 = await this.server.getPrimaryService('0000feb0-0000-1000-8000-00805f9b34fb')
+      const chars = await feb0.getCharacteristics()
+      for (const c of chars) {
+        const shortId = c.uuid.substring(4, 8)
+        this._chars.set(shortId, c)
+        if (c.properties.notify || c.properties.indicate) {
+          try {
+            await c.startNotifications()
+            const charShortId = shortId
+            c.addEventListener('characteristicvaluechanged', (ev) => {
+              const val = (ev.target as BluetoothRemoteGATTCharacteristic).value
+              if (!val) return
+              const raw = new Uint8Array(val.buffer)
+              this.log(`← [${charShortId}] ${bytesToHex(raw)}`)
+              this.handleQgjNotify(raw)
+            })
+          } catch (e: unknown) {
+            console.debug(`[BLE] feb subscribe failed:`, e instanceof Error ? e.message : e)
+          }
+        }
+      }
+      this.log('已绑定 kuyi 通道 (feb1/feb2)，可使用 QGJ 登录/控车')
+    } catch (e: unknown) {
+      console.debug('[BLE] feb0 service not available:', e instanceof Error ? e.message : e)
+    }
+  }
+
+  private handleQgjNotify(raw: Uint8Array) {
+    const parsed = parseQgjResponse(raw)
+    if (!parsed) return
+    if (parsed.cmdId === 0x1001 && parsed.success) {
+      this._token = 'QGJ_LOGIN_OK'
+      this.setState('authenticated')
+      this.log('QGJ 登录成功，控车通道已就绪')
+    }
   }
 
   async diagnose(): Promise<void> {
