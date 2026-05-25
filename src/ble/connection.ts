@@ -12,7 +12,7 @@ import type { ParsedResponse } from '../types'
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'authenticated'
 
-const QGJ_HEARTBEAT_INTERVAL_MS = 2500
+const QGJ_HEARTBEAT_INTERVAL_MS = 1000
 
 export class TailgBleConnection {
   private device: BluetoothDevice | null = null
@@ -283,16 +283,25 @@ export class TailgBleConnection {
 
   private startQgjHeartbeat() {
     this.stopQgjHeartbeat()
-    const tick = () => {
-      if (this._state !== 'authenticated' || !this._chars.has('feb1')) {
+    const feb3 = this._chars.get('feb3')
+    if (!feb3 || !feb3.properties.read) {
+      this.log('未找到可读的 feb3，跳过 QGJ 心跳')
+      return
+    }
+    const tick = async () => {
+      if (this._state !== 'authenticated') {
         this.stopQgjHeartbeat()
         return
       }
-      const frame = buildQgjLoginFrame('0', 0)
-      this.writeRaw('feb1', bytesToHex(frame)).catch(() => this.stopQgjHeartbeat())
+      try {
+        await feb3.readValue()
+      } catch (e: unknown) {
+        console.debug('[QGJ heartbeat] read feb3 failed:', e instanceof Error ? e.message : e)
+        this.stopQgjHeartbeat()
+      }
     }
     this._qgjHeartbeatTimer = window.setInterval(tick, QGJ_HEARTBEAT_INTERVAL_MS)
-    window.setTimeout(tick, 1500)
+    window.setTimeout(tick, 500)
   }
 
   private stopQgjHeartbeat() {
