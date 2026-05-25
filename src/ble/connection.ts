@@ -12,7 +12,7 @@ import type { ParsedResponse } from '../types'
 
 export type ConnectionState = 'disconnected' | 'connecting' | 'connected' | 'authenticated'
 
-const QGJ_HEARTBEAT_INTERVAL_MS = 5000
+const QGJ_HEARTBEAT_INTERVAL_MS = 2500
 
 export class TailgBleConnection {
   private device: BluetoothDevice | null = null
@@ -28,6 +28,7 @@ export class TailgBleConnection {
   private _maxReconnectAttempts = 3
   private _reconnecting = false
   private _qgjHeartbeatTimer: number | undefined
+  private _qgjAckResolvers: Array<(result: { success: boolean }) => void> = []
 
   onStateChange: ((state: ConnectionState) => void) | null = null
   onResponse: ((resp: ParsedResponse) => void) | null = null
@@ -259,6 +260,25 @@ export class TailgBleConnection {
       this.log('QGJ 登录成功，控车通道已就绪')
       this.startQgjHeartbeat()
     }
+    if (parsed.cmdId === 0x1002) {
+      const resolver = this._qgjAckResolvers.shift()
+      resolver?.({ success: parsed.success })
+    }
+  }
+
+  awaitQgjAck(timeoutMs = 5000): Promise<{ success: boolean }> {
+    return new Promise(resolve => {
+      const resolver = (result: { success: boolean }) => {
+        window.clearTimeout(timer)
+        resolve(result)
+      }
+      this._qgjAckResolvers.push(resolver)
+      const timer = window.setTimeout(() => {
+        const idx = this._qgjAckResolvers.indexOf(resolver)
+        if (idx >= 0) this._qgjAckResolvers.splice(idx, 1)
+        resolve({ success: false })
+      }, timeoutMs)
+    })
   }
 
   private startQgjHeartbeat() {

@@ -99,7 +99,23 @@ async function sendQgjCmd(conn: TailgBleConnection, cmd: CommandCode) {
   setCommandBusy(true, cmd)
   setFeedback('QGJ 指令发送中', `${name}已写入 feb1，等待 feb2 回执。`, 'TX')
   try {
+    const ackPromise = conn.awaitQgjAck()
     await conn.writeRaw('feb1', bytesToHex(frame))
+    const ack = await ackPromise
+    setCommandBusy(false, cmd)
+    setFeedback(
+      ack.success ? `${name}执行成功` : `${name}执行失败`,
+      ack.success ? '车辆已返回成功回执。' : '未收到成功回执，可检查链路后重试。',
+      ack.success ? 'OK' : 'Fail',
+    )
+    const updates: Partial<{ defenceState: string; powerState: string }> = {}
+    if (ack.success) {
+      if (cmd === '01') updates.defenceState = '已设防'
+      else if (cmd === '02') updates.defenceState = '已解防'
+      else if (cmd === '06') updates.powerState = '已上电'
+      else if (cmd === '07') updates.powerState = '已断电'
+    }
+    if (Object.keys(updates).length) setState(updates)
   } catch (e: unknown) {
     const msg = errMsg(e)
     setCommandBusy(false, cmd)
